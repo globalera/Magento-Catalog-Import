@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<!-- 
+/**
+#    Copyright (C) 2013 Global Era (http://www.globalera.com). All Rights Reserved
+#    @author Serenus Infotech <magento@serenusinfotech.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as
+#    published by the Free Software Foundation, either version 3 of the
+#    License, or (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+**/
+ -->
+	<layout version="0.1.0">
+		<customimport_index_index>
+			<reference name="root">
+				<action method="setTemplate"><template>page/1column.phtml</template></action>
+       	 	</reference>
+			<reference name="content">
+            	<block type="customimport/customimport" name="hello" template="customimport/customimport.phtml"/>
+        	</reference>
+		</customimport_index_index>
+     <catalog_product_view>
+         <reference name="product.info">
+             <block type="catalog/product_view_media" name="product.info.media" as="media" template="customimport/catalog/product/view/media.phtml" />
+         </reference>
+     </catalog_product_view>
+
+        <catalog_category_default>
+            <reference name="category.products">
+                <block type="catalog/category_view" name="category.products" template="catalog/category/view.phtml">
+                    <action method="setTemplate"><template>customimport/catalog/category/view.phtml</template></action>
+                    <block type="catalog/product_list" name="product_list" template="catalog/product/list.phtml">
+                        <block type="catalog/product_list_toolbar" name="product_list_toolbar" template="catalog/product/list/toolbar.phtml">
+                            <block type="page/html_pager" name="product_list_toolbar_pager"/>
+                            <!-- The following code shows how to set your own pager increments -->
+                            <!--
+                                <action method="setDefaultListPerPage"><limit>4</limit></action>
+                                <action method="setDefaultGridPerPage"><limit>9</limit></action>
+                                <action method="addPagerLimit"><mode>list</mode><limit>2</limit></action>
+                                <action method="addPagerLimit"><mode>list</mode><limit>4</limit></action>
+                                <action method="addPagerLimit"><mode>list</mode><limit>6</limit></action>
+                                <action method="addPagerLimit"><mode>list</mode><limit>8</limit></action>
+                                <action method="addPagerLimit" translate="label"><mode>list</mode><limit>all</limit><label>All</label></action>
+                            -->
+                        </block>
+                        <action method="addColumnCountLayoutDepend"><layout>empty</layout><count>6</count></action>
+                        <action method="addColumnCountLayoutDepend"><layout>one_column</layout><count>5</count></action>
+                        <action method="addColumnCountLayoutDepend"><layout>two_columns_left</layout><count>4</count></action>
+                        <action method="addColumnCountLayoutDepend"><layout>two_columns_right</layout><count>4</count></action>
+                        <action method="addColumnCountLayoutDepend"><layout>three_columns</layout><count>3</count></action>
+                        <action method="setToolbarBlockName"><name>product_list_toolbar</name></action>
+                    </block>
+                </block>
+            </reference>
+        </catalog_category_default>
+	</layout>

@@ -1,0 +1,102 @@
+<?php
+/**
+#    Copyright (C) 2013 Global Era (http://www.globalera.com). All Rights Reserved
+#    @author Serenus Infotech magento@serenusinfotech.com
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as
+#    published by the Free Software Foundation, either version 3 of the
+#    License, or (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see http://www.gnu.org/licenses/.
+**/
+ob_start();
+?>
+
+<?php
+//$xmlPath = Mage::getBaseDir().DS.'gec-catalog-export-draft.xml';
+
+ $xmlPath = Mage::getBaseDir().DS.'gec-catalog-export-draft.xml';	//catalog-large.xml
+
+$t0=microtime(true);
+$this->parseXml($xmlPath);
+
+//// CATAGORY AND CATEGORYRELATION IMPORT
+
+$categories =  $this->showCategory();
+if($categories){
+     $this->importAllCategory($categories);
+}
+
+$this->parseAllCategoryRelation();
+
+// ATTRIBUTE , ATTRIBUTE SET , ATTRIBUTE GROUP IMPORT
+
+
+// ATTRIBUTE IMPORT
+$parsedAttribute = $this->parseAttribute();
+if($parsedAttribute){
+      $this->importAttribute($parsedAttribute);
+}
+// ATTRIBUTE SET IMPORT
+$parsedAttributeSet = $this->parseAttributeSet();
+if($parsedAttributeSet){
+     $this->importAttributeSet($parsedAttributeSet);
+}
+// ATTRIBUTE GROUP IMPORT
+$parseAttributegrp = $this->parseAttributegrp();
+if($parseAttributegrp){
+      $this->importAttributeGrp($parseAttributegrp);
+}
+
+//PRODUCT IMPORT
+
+$products =  $this->showProducts();
+if($products){
+    $this->importAllProducts($products);
+}
+else{
+    echo 'no product available';
+}
+
+
+// ASSOCIATIONS <categoryProducts>
+$associatedProductsCategory =  $this->associatedProductsCategory();
+if($associatedProductsCategory){
+    $this->associateProducts($associatedProductsCategory);
+}else{
+    echo 'Category-Product association not found';
+}
+
+// ASSOCIATION  <productAssociations>
+$associatedProductsProducts =  $this->associatedProductsProducts();
+if($associatedProductsProducts){
+       $this->associatePdtPdt($associatedProductsProducts);
+}else{
+    echo 'Product-Product association not found';
+}
+
+
+foreach($this->_log_array as $msg){
+    echo $msg.'<br>';
+}
+
+
+$t1 = microtime(true);
+$time = $t1-$t0;
+echo "It took $time sec" ;
+
+// CODE FOR INDEXING
+$indexingProcesses = Mage::getSingleton('index/indexer')->getProcessesCollection();
+foreach ($indexingProcesses as $process) {
+    $process->reindexEverything();
+}
+
+ob_end_flush();
+?>

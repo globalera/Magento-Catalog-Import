@@ -1,0 +1,135 @@
+<?xml version="1.0"?>
+<!-- 
+/**
+#    Copyright (C) 2013 Global Era (http://www.globalera.com). All Rights Reserved
+#    @author Serenus Infotech <magento@serenusinfotech.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as
+#    published by the Free Software Foundation, either version 3 of the
+#    License, or (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+**/
+-->
+<config>
+    <modules>
+        <Gec_Customimport>
+            <version>0.1.0</version>
+        </Gec_Customimport>
+    </modules>
+    <frontend>
+        <routers>
+            <customimport>
+                <use>standard</use>
+                <args>
+                    <module>Gec_Customimport</module>
+                    <frontName>customimport</frontName>
+                </args>
+            </customimport>
+        </routers>
+        <layout>
+            <updates>
+                <customimport>
+                    <file>customimport.xml</file>
+                </customimport>
+            </updates>
+        </layout>
+    </frontend>
+    <admin>
+        <routers>
+            <customimport>
+                <use>admin</use>
+                <args>
+                    <module>Gec_Customimport</module>
+                    <frontName>customimport</frontName>
+                </args>
+            </customimport>
+        </routers>
+    </admin>
+    <global>
+        <models>
+            <customimport>
+                <class>Gec_Customimport_Model</class>
+                <resourceModel>customimport_mysql4</resourceModel>
+            </customimport>
+            <customimport_mysql4>
+                <class>Gec_Customimport_Model_Mysql4</class>
+                <entities>
+                    <attrsetmapping>
+                        <table>external_attrsetmapping_info</table>
+                    </attrsetmapping>
+                    <attrgroup>
+                        <table>external_attrgroup_mapping_info</table>
+                    </attrgroup>
+                    <eavattributegroup>
+                        <table>eav_attribute_group</table>
+                    </eavattributegroup>
+                    <eaventityattribute>
+                        <table>eav_entity_attribute</table>
+                    </eaventityattribute>
+                    <eavattributeoption>
+                        <table>eav_attribute_option</table>
+                    </eavattributeoption>
+                    <externalcategorymappinginfo>
+                        <table>external_category_mapping_info</table>
+                    </externalcategorymappinginfo>
+                    <catalogentity>
+                        <table>catalog_category_entity</table>
+                    </catalogentity>
+                </entities>
+            </customimport_mysql4>
+            <catalog_resource_eav_mysql4>
+                <rewrite>
+                    <attribute>Gec_Customimport_Model_Catalog_Resource_Eav_Mysql4_Attribute</attribute>
+                </rewrite>
+            </catalog_resource_eav_mysql4>
+        </models>
+        <resources>
+            <customimport_setup>
+                <setup>
+                    <module>Gec_Customimport</module>
+                </setup>
+                <connection>
+                    <use>core_setup</use>
+                </connection>
+            </customimport_setup>
+            <customimport_write>
+                <connection>
+                    <use>core_write</use>
+                </connection>
+            </customimport_write>
+            <customimport_read>
+                <connection>
+                    <use>core_read</use>
+                </connection>
+            </customimport_read>
+        </resources>
+        <blocks>
+            <customimport>
+                <class>Gec_Customimport_Block</class>
+            </customimport>
+            <adminhtml>
+                <rewrite>
+                    <catalog_product_attribute_edit_tab_options>Gec_Customimport_Block_Catalog_Product_Attribute_Edit_Tab_Options</catalog_product_attribute_edit_tab_options>
+                </rewrite>
+            </adminhtml>
+        </blocks>
+        <helpers>
+            <customimport>
+                <class>Gec_Customimport_Helper</class>
+            </customimport>
+            <catalog>
+                <rewrite>
+                    <image>Gec_Customimport_Helper_Catalog_Image</image>
+                </rewrite>
+            </catalog>
+        </helpers>
+    </global>
+</config>
