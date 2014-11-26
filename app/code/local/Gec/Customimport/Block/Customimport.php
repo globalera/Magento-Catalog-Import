@@ -80,11 +80,17 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
     public function importAllProducts($products){
         $item = array();
         foreach($products as $product){
+            //echo "Start process for Product # ".$product->id;
+            Mage::log("Start process for Product # ".$product->id, null, 'xmlimport1.log'); //code for generate log
             $this->_current_row++;
             $this->importItem($product);
+            Mage::log("End process for Product # ".$product->id, null, 'xmlimport1.log'); //code for generate log
+            //echo "End process for Product # ".$product->id;
         }
         $this->createLog("Successfully created products: {$this->_created_num}");
         $this->createLog("Successfully updated products: {$this->_updated_num}");
+        Mage::log("Successfully created products: {$this->_created_num}", null, 'xmlimport1.log'); //code for generate log
+        Mage::log("Successfully updated products: {$this->_updated_num}", null, 'xmlimport1.log'); //code for generate log
         $this->_created_num = 0;
         $this->_updated_num = 0;
     }
@@ -93,10 +99,15 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
         $this->_created_num = 0;
         $this->_updated_num = 0;
         foreach($categories  as $category){
+            $msg  = "Start process for category # ".$category->id;
+            Mage::log($msg,null,'xmlimport1.log'); //code for generate log
             $this->importCategory($category);
+            $msg  = "End process for category # ".$category->id;
+            Mage::log($msg,null,'xmlimport1.log'); //code for generate log
         }
         $this->createLog("Successfully created categories: {$this->_created_num}");
         $this->createLog("Successfully updated categories: {$this->_updated_num}");
+        Mage::log("Successfully created categories: {$this->_created_num} Successfully updated categories: {$this->_updated_num}",null,'xmlimport1.log'); //code for generate log
         Mage::log("Successfully created categories: {$this->_created_num} Successfully updated categories: {$this->_updated_num}",null,'mylog.log');
  	    $this->_created_num = 0;
         $this->_updated_num = 0;
@@ -128,6 +139,7 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
             }
             else{
                 echo $parent.' category not found to associate products';
+                Mage::log('category not found: '.$parent,null,'xmlimport1.log'); //code for generate log
                 Mage::log('category not found: '.$parent,null,'catalogimport.log');
             }
         }
@@ -274,7 +286,8 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
             }                
         }
         else{
-            if(count($externall) == 0){  
+            if(count($externall) == 0){
+                Mage::log('subcategory id not found:'.$ext_subid, null, 'xmlimport1.log');  //code for generate log
                 Mage::log('subcategory id not found:'.$ext_subid, null, 'catalogimport.log');
             }
         }
@@ -284,15 +297,28 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
         $missingInfoRow = $this->_current_row -1;
         if(!isset($item->id) || trim($item->id)==''){
             $this->createLog('sku not found for product row # '.$missingInfoRow, "error");
+            Mage::log('sku not found for product record #:'.$this->_current_row, null, 'xmlimport1.log'); //code for generate log
           //  Mage::log('sku not found for product record #:'.$this->_current_row, null, 'catalogimport.log');
             return false;
         }
+        
+        /* code for default attribute set id start */
+        
+    	if(($item->attributeSetId)=='')
+        {
+        	$item->attributeSetId='Default';
+        }
+        /* code for default attribute set id end */
+        
+        /*
         if(!isset($item->attributeSetId) || trim($item->attributeSetId)==''){
             $this->createLog('AttributesetId not found for product Id # '.$item->id, "error");
          //   Mage::log('AttributesetId not found for product record #:'.$this->_current_row, null, 'catalogimport.log');
             return false;
         }
+        */
         if(!isset($item->type) || trim($item->type)==''){
+            Mage::log('Product type not found for product record # '.$item->id, null, 'xmlimport1.log'); //code for generate log 
             $this->createLog('Product type not found for product record # '.$item->id, "error");
          //   Mage::log('Product type not found for product record #:'.$this->_current_row, null, 'catalogimport.log');
             return false;
@@ -304,6 +330,7 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
         if(!isset($pid))
         {
             if(!isset($asid)){
+                Mage::log('cannot create product sku:'.(string)$item->id, null, 'xmlimport1.log');  //code for generate log
                 $this->createLog('cannot create product sku:'.(string)$item->id.', mentioned attributeset id is not available.product row id: #'.$missingInfoRow,'error');
               //  Mage::log('cannot create product sku:'.(string)$item->id,null,'catalogimport.log');
                 return false;
@@ -315,6 +342,7 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
                 $this->createProduct($item, $asid); //create simple product
             }
             else{
+                 Mage::log("Import function does not support product type of record: {$item->id}", null, 'xmlimport1.log'); //code for generate log
                  $this->createLog("Import function does not support product type of record: {$item->id}");
             }
             $this->_curitemids["pid"] = $pid;
@@ -549,9 +577,11 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
                     echo "exception:$e";
                 }
             }else{
+                Mage::log("Could not get super attribute for product. Hence skipped product: {$item->id}", null, 'xmlimport1.log'); //code for generate log
                 echo 'Could not get super attribute for product. Hence skipped product' .(string)$item->id ;
             }
         }else{
+            Mage::log("Super attribute is missing. Hence skipped product: {$item->id}", null, 'xmlimport1.log'); //code for generate log
             echo 'Super attribute is missing. Hence skipped product' .(string)$item->id ;
         }
     }
@@ -609,6 +639,7 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
             $attr_id = $loadedattr->getAttributeId();  // attribute id of magento
             if(!$attr_id){
               //  echo 'attribute '.$attribute_code . 'is not available in magento database.';
+                  Mage::log("Skipped product {$item->id}, attribute is not available in magento database.: {$attribute_code}", null, 'xmlimport1.log'); //code for generate log
                   $this->createLog("Skipped product {$item->id}, attribute is not available in magento database.: {$attribute_code}");
                   $skipStatus = 1;
                   break;
@@ -655,10 +686,12 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
 	                return $productId;
 	            }
 	            else{
+	                Mage::log('Skipped product due to improper attribute values :'.(string)$item->id, null, 'xmlimport1.log'); //code for generate log
 	            	echo 'Skipped product due to improper attribute values :'.(string)$item->id;
 	            	// Mage::log('Skipped product due to improper attribute values :'.(string)$item->id,null,'catalogimport.log');           	
 	            }	           
             }else{
+                Mage::log('Skipped product due to some error while save :'.(string)$item->id, null, 'xmlimport1.log'); //code for generate log
             	echo 'Skipped product due to some error while save :'.(string)$item->id;
             //	Mage::log('Skipped product due to some error while save :'.(string)$item->id,null,'catalogimport.log');  
             }                                
@@ -715,6 +748,7 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
                 $attr_id = $loadedattr->getAttributeId();  // attribute id of magento
                 if(!$attr_id){
                     echo 'attribute '.$attribute_code . 'is not available in magento database.Hence skipping product having id' . (string)$item->id;
+                    Mage::log('attribute '.$attribute_code . 'is not available in magento database.Hence skipping product having id' . (string)$item->id, null, 'xmlimport1.log'); //code for generate log
                 }
                 else{
                     $attr_type = $loadedattr->getFrontendInput();
@@ -728,6 +762,7 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
                     if($attr_type =='select' && count($attribute_values)>1){
                         //multiple values for attribute which is not multiselect
                         echo 'Attribute '. $attribute_code. 'can not have multiple values. Hence skipping product having id' . (string)$item->id;
+                        Mage::log('Attribute '. $attribute_code. 'can not have multiple values. Hence skipping product having id' . (string)$item->id, null, 'xmlimport1.log'); //code for generate log
                         $skipStatus = 1;
                         break;
                     }
@@ -759,11 +794,13 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
 	            unset($product);
 	            return $productId;
             }else{
+                Mage::log('Skipped product due to improper attribute values :'.(string)$item->id, null, 'xmlimport1.log'); //code for generate log
             	// echo 'Skipped product due to improper attribute values :'.(string)$item->id;
             	// Mage::log('Skipped product due to improper attribute values :'.(string)$item->id,null,'catalogimport.log');  
             }
             
         }else{
+                Mage::log('Skipped product due to some error while save :'.(string)$item->id, null, 'xmlimport1.log'); //code for generate log
         	  	echo 'Skipped product due to some error while save :'.(string)$item->id;
             //	Mage::log('Skipped product due to some error while save :'.(string)$item->id,null,'catalogimport.log'); 
         }
@@ -781,10 +818,24 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
     }
 
     public function getItemIds($item){
-        $external_set_id =  (string)$item->attributeSetId;
+        //$external_set_id =  (string)$item->attributeSetId;
+    	
+        /* Code for Attribute set for product start */
+    	if($external_set_id=='')
+    	{
+    		$external_set_id='Default';
+    	}
+    	else
+    	{
+    		$external_set_id =  (string)$item->attributeSetId;
+    	}
+    	/* Code for Attribute set for product end */
+    	
         $mapObj =  Mage::getModel('customimport/customimport');
-        $magento_set_id = $mapObj->getAttributeSetIdByExternalId($external_set_id);
-
+        //$magento_set_id = $mapObj->getAttributeSetIdByExternalId($external_set_id);
+        $attributeSetName = $external_set_id;  // Code for Attribute set for product
+        $magento_set_id = Mage::getModel('eav/entity_setup','core_setup')->getAttributeSetId('catalog_product',$attributeSetName);
+        
         $sku=(string)$item->id;
         if($sku!= $this->_curitemids["sku"]){
             //try to find item ids in db
@@ -1046,6 +1097,7 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
                 }
             }
         }else{
+            Mage::log('product does not exists :'.(string)$productDetail->id, null, 'xmlimport1.log'); //code for generate log
             echo (string)$productDetail->id.' product does not exists';
             Mage::log('product does not exists :'.(string)$productDetail->id,null,'catalogimport.log');
         }
@@ -1060,20 +1112,30 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
                     reset($externall);
                     $first_key = key($externall);
                     foreach($associate->product as $product){
+                        Mage::log("Start Process for category # ".$first_key." and product # ".$product->id. "association", null, 'xmlimport1.log'); //code for generate log
+                        //echo "Start Process for category # ".$first_key." and product # ".$product->id. "association" ;
                         $this->associateProductToCategory($product,$first_key);
+                        Mage::log("End Process for category # ".$first_key." and product # ".$product->id. "association", null, 'xmlimport1.log'); //code for generate log
+                       //echo "End Process for category # ".$first_key." and product # ".$product->id. "association" ;
                     }
                 }
                 else{
                 	foreach($externall as $systemCatid=>$v){
                 		foreach($associate->product as $product){
+                		      Mage::log("Start Process for category # ".$systemCatid." and product # ".$product->id. "association", null, 'xmlimport1.log'); //code for generate log
+                		     //echo "Start Process for category # ".$systemCatid." and product # ".$product->id. "association" ;
                 			$this->associateProductToCategory($product,$systemCatid);
+                			Mage::log("End Process for category # ".$systemCatid." and product # ".$product->id. "association", null, 'xmlimport1.log'); //code for generate log
+                			//echo "End Process for category # ".$systemCatid." and product # ".$product->id. "association" ;
                 		}
                 	}               	               	
                 }
             }
             else{
                 if(count($externall) == 0){
+                    //echo 'category id not found: # '.$parent ;
                     $this->createLog('category id not found: # '.$parent, "error");
+                    Mage::log('category id not found: '.$parent, null, 'xmlimport1.log'); //code for generate log
                     Mage::log('category id not found: '.$parent,null,'catalogimport.log');
                 }
             }
@@ -1081,6 +1143,8 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
     }
     public function associatePdtPdt($association){
         foreach($association as $associate){
+            //echo "Start Process for product association # ".$associate->productIdFrom ;
+            Mage::log("Start Process for product association # ".$associate->productIdFrom, null, 'xmlimport1.log'); //code for generate log
             $mainProduct = Mage::getModel('catalog/product')->loadByAttribute('sku',(string)$associate->productIdFrom);
             if ($mainProduct) {
                 $productId = $mainProduct->getId();
@@ -1122,9 +1186,12 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
                 unset($relatedArray);
                 unset($associatedArray);
             }else{
+                Mage::log('product not found for association: # '.$associate->productIdFrom, null, 'xmlimport1.log'); //code for generate log
+                //echo 'product not found for association: # '.$associate->productIdFrom;
                 $this->createLog('product not found for association: # '.$associate->productIdFrom, "error");
                 Mage::log('product not found for association: # '.$associate->productIdFrom,null,'catalogimport.log');
             }
+            //echo "End Process for product association # ".$associate->productIdFrom ;
         }
     }
 
@@ -1134,6 +1201,7 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
         if( $xmlData->productAssociations->association instanceof Varien_Simplexml_Element){
             return $xmlData->productAssociations->association;
         }else{
+            Mage::log('Associatation block is empty', null, 'xmlimport1.log'); //code for generate log
             Mage::log('Associatation block is empty',null,'catalogimport.log');
             $this->createLog('Associatation block is empty: # ');
         }
@@ -1158,13 +1226,14 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
                         $attr->save();
                         $result =  true;
                     }else{
-                        echo 'attribute '.$attribute_id. ' can not be updated to become superattribute';
-                        
+                         Mage::log('attribute '.$attribute_id. ' can not be updated to become superattribute', null, 'xmlimport1.log'); //code for generate log
+                        //echo 'attribute '.$attribute_id. ' can not be updated to become superattribute';
                         $result =  false;
                     }
                 }
             }else{
-                echo 'attribute '.$attribute_id.' does not exists';
+                Mage::log('attribute '.$attribute_id.' does not exists', null, 'xmlimport1.log'); //code for generate log
+                //echo 'attribute '.$attribute_id.' does not exists';
                 $result =  false;
             }
         }
@@ -1214,7 +1283,7 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
         //Load the particular attribute by id
         $attr = $model->loadByCode('catalog_product',(string)$attribute->id);
         $attr_id = $attr->getAttributeId();
-
+        
         if($attr_id !=''){
             $attr->addData($_attribute_data);
             $option['attribute_id'] = $attr_id;
@@ -1260,6 +1329,26 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
             $model->setIsUserDefined(1);
             try {
                 $model->save();
+                
+                /* Code for assigned Attribute Set to Attribute Start*/ 
+                $attribute_set_name = 'Default';
+				$group_name = 'general';
+				$attribute_code = (string)$attribute->id;
+				$setup = new Mage_Eav_Model_Entity_Setup('core_setup');
+				//-------------- add attribute to set and group
+	            $attribute_set_id=$setup->getAttributeSetId('catalog_product', $attribute_set_name);
+    	        $attribute_group_id=$setup->getAttributeGroupId('catalog_product', $attribute_set_id, $group_name);
+        	    $attribute_id=$setup->getAttributeId('catalog_product', $attribute_code);
+            	$setup->addAttributeToSet($entityTypeId='catalog_product',$attribute_set_id, $attribute_group_id, $attribute_id);
+            	/* Code for assigned Attribute Set to Attribute End*/
+				
+            //-------------- add attribute to set and group
+            $attribute_set_id=$setup->getAttributeSetId('catalog_product', $attribute_set_name);
+            $attribute_group_id=$setup->getAttributeGroupId('catalog_product', $attribute_set_id, $group_name);
+            $attribute_id=$setup->getAttributeId('catalog_product', $attribute_code);
+
+            $setup->addAttributeToSet($entityTypeId='catalog_product',$attribute_set_id, $attribute_group_id, $attribute_id);
+                
                 unset($model);
                 if($count_value > 0){
                     $model = Mage::getModel('catalog/resource_eav_attribute');
@@ -1292,7 +1381,11 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
 
     public function importAttribute($parsedAttribute){
         foreach($parsedAttribute as $attribute){
+            //echo "Start Process for attribute # ".$attribute->id;
+            Mage::log("Start Process for attribute # ".$attribute->id, null, 'xmlimport1.log'); //code for generate log
             $this->createAttribute($attribute);
+            Mage::log("End Process for attribute # ".$attribute->id, null, 'xmlimport1.log'); //code for generate log
+           // echo "End Process for attribute # ".$attribute->id;
         }
         $this->reindexDB(7);	// 7 is used after attribute creation.
     }
@@ -1322,6 +1415,8 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
         $attributegroup_status = array();
 
         foreach($parsedAttributeSet as $set){
+             Mage::log("Start Process for attribute # ".$set->id, null, 'xmlimport1.log'); //code for generate log
+            //echo "Start Process for attribute # ".$set->id;
             $attributeSetId = (string)$set->id;
             $attributeSetName = (string)$set->name;
 
@@ -1339,6 +1434,8 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
             }
             unset($attributegroup_status);
             unset($attributegroup_id);
+            Mage::log("End Process for attribute # ".$set->id, null, 'xmlimport1.log'); //code for generate log
+            //echo "End Process for attribute # ".$set->id;
         }
         $this->attributeGroupsGlobal = $attributeSet_groups;
     }
@@ -1412,7 +1509,7 @@ class Gec_Customimport_Block_Customimport extends Gec_Customimport_Block_Catalog
 
             $groupId = (string)$attribute->id;
             $groupName = (string)$attribute->name;
-
+            
             if($groupName ==''){
                 $groupName = $groupId;
             }

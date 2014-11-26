@@ -20,9 +20,31 @@ ob_start();
 ?>
 
 <?php
-//$xmlPath = Mage::getBaseDir().DS.'gec-catalog-export-draft.xml';
+$dir_root=Mage::getBaseDir();
+$flag='0';
 
- $xmlPath = Mage::getBaseDir().DS.'gec-catalog-export-draft.xml';	//catalog-large.xml
+//$xmlPath = Mage::getBaseDir().DS.'gec-catalog-export-draft.xml';
+$xmlPath = $dir_root.DS.'xmlfiles'.DS.'import.xml';	//catalog-large.xml
+
+
+/* code for check file permission start */
+if(!is_writable($xmlPath)){
+	Mage::log("Please give writable permission for file.", null, 'xmlimport1.log'); //code for generate log
+	echo "<br/><br/>Please give writable permission for file.<br/><br/>";die;
+}
+
+/* code for check file permission end */
+
+/* code for reanme file after process start*/
+$today_date = date("Y-m-d_H-i-s");
+$current_file_path=$xmlPath;
+
+$new_error_file_path=$dir_root.DS.'xmlfiles'.DS.'import_'.$today_date.'_error.xml';
+$new_completed_file_path=$dir_root.DS.'xmlfiles'.DS.'import_'.$today_date.'_completed.xml';
+
+/* code for reanme file after process end*/
+
+//$xmlPath = Mage::getBaseDir().DS.'gec-catalog-export-draft.xml';	//catalog-large.xml
 
 $t0=microtime(true);
 $this->parseXml($xmlPath);
@@ -30,60 +52,135 @@ $this->parseXml($xmlPath);
 //// CATAGORY AND CATEGORYRELATION IMPORT
 
 $categories =  $this->showCategory();
-if($categories){
-     $this->importAllCategory($categories);
+
+/* Code start for import categories */
+try
+{
+	if($categories)
+	{
+       	$this->importAllCategory($categories);
+	}
+
+	$this->parseAllCategoryRelation();
+	echo "<br/><br/>Categories are successfully imported<br/><br/>";
+}
+catch(Exception $e)
+{
+	$flag='1';
 }
 
-$this->parseAllCategoryRelation();
+/* Code End for import categories */
+
 
 // ATTRIBUTE , ATTRIBUTE SET , ATTRIBUTE GROUP IMPORT
 
 
 // ATTRIBUTE IMPORT
-$parsedAttribute = $this->parseAttribute();
-if($parsedAttribute){
-      $this->importAttribute($parsedAttribute);
+
+/* Code Start for import attributes */
+try
+{
+	$parsedAttribute = $this->parseAttribute();
+	if($parsedAttribute){
+	      $this->importAttribute($parsedAttribute);
+	}
+	// ATTRIBUTE SET IMPORT
+	$parsedAttributeSet = $this->parseAttributeSet();
+	if($parsedAttributeSet){
+	     $this->importAttributeSet($parsedAttributeSet);
+	}
+	// ATTRIBUTE GROUP IMPORT
+	$parseAttributegrp = $this->parseAttributegrp();
+	if($parseAttributegrp){
+	      $this->importAttributeGrp($parseAttributegrp);
+	}
+	echo "<br/><br/>Attributes are successfully imported<br/><br/>";
 }
-// ATTRIBUTE SET IMPORT
-$parsedAttributeSet = $this->parseAttributeSet();
-if($parsedAttributeSet){
-     $this->importAttributeSet($parsedAttributeSet);
+catch(Exception $e)
+{
+	$flag='1';
 }
-// ATTRIBUTE GROUP IMPORT
-$parseAttributegrp = $this->parseAttributegrp();
-if($parseAttributegrp){
-      $this->importAttributeGrp($parseAttributegrp);
-}
+
+/* Code End for import attributes */
+
+
 
 //PRODUCT IMPORT
 
-$products =  $this->showProducts();
-if($products){
-    $this->importAllProducts($products);
+/* Code Start for import Products */
+try
+{
+	$products =  $this->showProducts();
+	if($products){
+	    $this->importAllProducts($products);
+	    echo "<br/><br/>Products are successfully imported<br/><br/>";
+	}
+	else{
+	    echo 'no product available';
+	}
 }
-else{
-    echo 'no product available';
+catch(Exception $e)
+{
+	$flag='1';
 }
+/* Code End for import Products */
 
 
 // ASSOCIATIONS <categoryProducts>
-$associatedProductsCategory =  $this->associatedProductsCategory();
-if($associatedProductsCategory){
-    $this->associateProducts($associatedProductsCategory);
-}else{
-    echo 'Category-Product association not found';
+try
+{
+	$associatedProductsCategory =  $this->associatedProductsCategory();
+	if($associatedProductsCategory){
+	    $this->associateProducts($associatedProductsCategory);
+	}else{
+	    echo 'Category-Product association not found';
+	}
+}
+catch(Exception $e)
+{
+	$flag='1';
 }
 
 // ASSOCIATION  <productAssociations>
-$associatedProductsProducts =  $this->associatedProductsProducts();
-if($associatedProductsProducts){
-       $this->associatePdtPdt($associatedProductsProducts);
-}else{
-    echo 'Product-Product association not found';
+try
+{
+	$associatedProductsProducts =  $this->associatedProductsProducts();
+	if($associatedProductsProducts){
+	       $this->associatePdtPdt($associatedProductsProducts);
+	}else{
+	    echo 'Product-Product association not found';
+	}
+}
+catch(Exception $e)
+{
+	$flag='1';
 }
 
 
+
+/* code for change file name after complete start */
+if($flag=='1')
+{
+	$is_exist=file_exists($current_file_path);
+	if($is_exist=='1')
+	{
+		rename($current_file_path, $new_error_file_path);
+	}
+   	echo '<br/><br/>Error in xml file to import'.'<br/><br/>';
+}
+else
+{
+	$is_exist=file_exists($current_file_path);
+	if($is_exist=='1')
+	{
+		rename($current_file_path, $new_completed_file_path);
+	}
+   	echo '<br/><br/>Successfully import to magento'.'<br/><br/>';
+}	
+/* code for change file name after complete ende */
+
 foreach($this->_log_array as $msg){
+    Mage::log($msg, null, 'xmlimport.log'); //code for generate log
     echo $msg.'<br>';
 }
 
@@ -91,6 +188,7 @@ foreach($this->_log_array as $msg){
 $t1 = microtime(true);
 $time = $t1-$t0;
 echo "It took $time sec" ;
+
 
 // CODE FOR INDEXING
 $indexingProcesses = Mage::getSingleton('index/indexer')->getProcessesCollection();
