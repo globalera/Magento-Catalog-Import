@@ -1,7 +1,8 @@
 <?php
 /**
-#    Copyright (C) 2013 Global Era (http://www.globalera.com). All Rights Reserved
+#    Copyright (C) 2013-2015 Global Era Commerce (http://www.globalera.com). All Rights Reserved
 #    @author Serenus Infotech <magento@serenusinfotech.com>
+#    @author Intelliant <magento@intelliant.net>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -15,27 +16,19 @@
 #
 #    You should have received a copy of the GNU Affero General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-**/
+ **/
 
-class Gec_Customimport_Block_Catalogimport extends Mage_Core_Block_Template
+class Gec_Customimport_Adminhtml_IndexController extends Mage_Adminhtml_Controller_Action
 {
-  	public $_log_array = array();
-    public $_xmlObj;
-    public $default_asid;
-    public $_product_list;
-    public $_category_list;
-    public $_cat_relation;
-    public $_current_row = 1;
-    public $_curitemids = array("sku"=>null);
-    public $_optidcache = null;
-    public $_dstore = array();
-    public $_same;
-    public $mode = "create";
-    public $prod_etype = 4;
-    public $_updated_num = 0;
-    public $_created_num = 0;
-    public $attributeGroupsGlobal = array();   
-    public $_store_id;
-    public $_default_category_id;
+    public function indexAction()
+    {
+       $this->loadLayout();
+       $this->_title($this->__("Catalog Import"));
+       $this->renderLayout();
+    }
+    
+    protected function _isAllowed()
+	{
+		return Mage::getSingleton('admin/session')->isAllowed('catalog/customimport');  
+	}
 }
-?>

@@ -1,4 +1,5 @@
-<?php 
+<?xml version="1.0"?>
+<!-- 
 /**
 #    Copyright (C) 2013 Global Era (http://www.globalera.com). All Rights Reserved
 #    @author Serenus Infotech <magento@serenusinfotech.com>
@@ -16,14 +17,14 @@
 #    You should have received a copy of the GNU Affero General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-
-class Gec_Customimport_IndexController extends Mage_Core_Controller_Front_Action
-{
-    public function indexAction()
-    {
-     $this->loadLayout(array('default'));
-     $this->renderLayout();
-    }
-}
-
-?>
+ -->
+<layout version="0.1.0">
+	 <customimport_adminhtml_index_index>
+		<!--<reference name="root">
+			<action method="setTemplate"><template>page/1column.phtml</template></action>
+		</reference>-->
+		<reference name="content">
+			<block type="customimport/adminhtml_customimport" name="hello" template="customimport/customimport.phtml"/>
+		</reference>
+	 </customimport_adminhtml_index_index>     
+</layout>

@@ -1,0 +1,184 @@
+<style>
+.fileUpload input.upload{position: absolute;top: 0;right: 0;margin: 0;padding: 0;font-size: 20px;cursor: pointer;opacity: 0;filter: alpha(opacity=0);}
+.import_div{font-size:16px;}
+.btn{background-image: none;border: 1px solid transparent;border-radius: 4px;cursor: pointer;display: inline-block;font-size: 14px;font-weight: normal;line-height: 1.42857;margin-bottom: 0;padding: 6px 12px;text-align: center;vertical-align: middle;white-space: nowrap;}
+.btn-info{background-image: linear-gradient(to bottom, #5bc0de 0px, #2aabd2 100%);
+background-repeat: repeat-x;border-color: #28a4c9;}
+.btn-primary{background-color: #535353;border-color: #535353;color: #fff;text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);}
+.btn-primary:hover{background-color: #0099e6;border-color: #0099e6;color: #fff;}
+</style>
+<form action="<?php echo $this->getUrl('*/*/'); ?>" method="post" enctype="multipart/form-data"><br>
+    <?php echo $this->getBlockHtml('formkey')?>
+    <div class="import_div" style="font-size:16px;">
+        <?php echo $this->__('Select File to import') ?>: <br/><br/>
+    </div>
+    <input class="btn btn-info" type="file" name="uploadFile"> <br/><br/>
+    <input class="fileUpload btn btn-primary" name="upload_xml"  type="submit" value="Upload File">
+    <br /><br />
+    <i>Allowed file name characters - [a-z,A-Z,0-9,_,-]. <br />(If any other character is part of the file name, then the import process shall not complete successfully.)</i>
+</form>
+<?php
+/**
+#    Copyright (C) 2013-2015 Global Era Commerce (http://www.globalera.com). All Rights Reserved
+#    @author Serenus Infotech <magento@serenusinfotech.com>
+#    @author Intelliant <magento@intelliant.net>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as
+#    published by the Free Software Foundation, either version 3 of the
+#    License, or (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ **/
+ob_start();
+set_time_limit(0);
+$dir_root = Mage::getBaseDir() . DS;
+$xmlPath  = $dir_root . 'xmlfiles' . DS;
+$logPath  = Mage::getBaseDir('log') . '/customimport.log';
+
+if ($data = $this->getRequest()->getPost()) {
+    $customHelper = Mage::helper('customimport');
+    if (isset($_FILES['uploadFile']['name']) && $_FILES['uploadFile']['name'] != '') {
+        $filename = $_FILES["uploadFile"]['name'];
+        try {
+            $uploader = new Varien_File_Uploader('uploadFile');
+            $uploader->setAllowedExtensions(array('xml')); // Set allowed file extesion.
+            $uploader->setAllowRenameFiles(false);
+            $uploader->setFilesDispersion(false); // (file will go in something like /media/f/i/file.jpg)
+            $uploader->save($xmlPath, $filename);
+        }
+        catch (Exception $e) {
+            $customHelper->reportError($e->getMessage());
+            $customHelper->sendLogEmail($logPath);
+        }
+        
+        $pathAndName             = $xmlPath . $filename;
+        $today_date              = date("Y-m-d_H-i-s");
+        $current_file_path       = $pathAndName;
+        $file                    = basename($filename, ".xml");
+        $new_error_file_path     = $xmlPath . $file . '_' . $today_date . '_error.xml';
+        $new_completed_file_path = $xmlPath . $file . '_' . $today_date . '_completed.xml';
+        $t0                      = microtime(true);
+        unlink($logPath);
+        $this->parseXml($pathAndName);
+        $flag = true;
+        try {
+            #################    Code start for import categories    #################
+            $categories    = $this->showCategory();
+            $msgcollection = "";
+            if ($categories) {
+                $this->importAllCategory($categories);
+                $customHelper->reportSuccess($this->__('Categories was successfully imported'));
+            } else {
+                $customHelper->reportInfo($this->__("There was no category found."));
+            }
+            
+            $categoryRelationStatus = $this->parseAndUpdateCategoryRelation();
+            if ($categoryRelationStatus == 1) {
+                $customHelper->reportSuccess($this->__("Categories relations was successfully imported"));
+            } else if ($categoryRelationStatus == 0) {
+                $customHelper->reportInfo($this->__("There was no category relation found."));
+            } else {
+                $customHelper->reportInfo($this->__("Categories relations was successfully imported with some issues."));
+            }
+            #################    Code End for import categories    #################
+            
+            #################    Code Start for import attributes    #################
+            $parsedAttribute = $this->parseAttribute();
+            if ($parsedAttribute) {
+                $this->importAttribute($parsedAttribute);
+                $customHelper->reportSuccess($this->__("Attribute was successfully imported"));
+            } else {
+                $customHelper->reportInfo($this->__("There was no attribute found."));
+            }
+            
+            $parsedAttributeSet = $this->parseAttributeSet();
+            if ($parsedAttributeSet) {
+                $this->importAttributeSet($parsedAttributeSet);
+                $customHelper->reportSuccess($this->__("Attribute Set was successfully imported"));
+            } else {
+                $customHelper->reportInfo($this->__("There was no attribute set found."));
+            }
+            
+            $parseAttributegrp = $this->parseAttributegrp();
+            if ($parseAttributegrp) {
+                $this->importAttributeGrp($parseAttributegrp);
+                $customHelper->reportSuccess($this->__("Attribute Group was successfully imported"));
+            } else {
+                $customHelper->reportInfo($this->__("There was no attribute group found."));
+            }
+            #################    Code End for import attributes    #################
+            
+            #################    Code Start for import products    #################
+            $products = $this->showProducts();
+            if ($products) {
+                $this->importAllProducts($products, $current_file_path, $new_error_file_path);
+                $customHelper->reportSuccess($this->__("Products was successfully imported"));
+            } else {
+                $customHelper->reportInfo($this->__("There was no products found."));
+            }
+            #################    Code End for import products    #################
+            
+            #################    Code Start for category product association    #################
+            $associatedProductsCategory = $this->associatedProductsCategory();
+            if ($associatedProductsCategory) {
+                $this->associateProducts($associatedProductsCategory);
+                $customHelper->reportSuccess($this->__("Category-Product Association was successfully imported"));
+            } else {
+                $customHelper->reportInfo($this->__("There was no category-product association found."));
+            }
+            #################    Code End for category product association    #################
+            
+            #################    Code Start for product association    #################
+            $associatedProductsProducts = $this->associatedProductsProducts();
+            if ($associatedProductsProducts) {
+                $this->associatePdtPdt($associatedProductsProducts);
+                $customHelper->reportSuccess($this->__("Product-Product Association was successfully imported"));
+            } else {
+                if (($products->type == "configurable") || ($products->type == "bundle")) {
+                    $customHelper->reportInfo($this->__("There was no product-product association found."));
+                }
+            }
+            #################    Code End for product association    #################
+            
+        }
+        catch (Exception $e) {
+            $flag = false;
+            $customHelper->reportError($e->getMessage());
+            $customHelper->sendLogEmail($logPath);
+        }
+        
+        if ($flag === false) {
+            $is_exist = file_exists($current_file_path);
+            if ($is_exist == '1') {
+                rename($current_file_path, $new_error_file_path);
+            }
+            $customHelper->reportError($this->__('There was an error during xml import'));
+        } else {
+            $is_exist = file_exists($current_file_path);
+            if ($is_exist == '1') {
+                rename($current_file_path, $new_completed_file_path);
+            }
+            $customHelper->reportSuccess($this->__('Import process was completed successfully'));
+        }
+        $t1   = microtime(true);
+        $time = $t1 - $t0;
+        $customHelper->reportInfo($this->__('It took') . ' ' . $time . ' ' . $this->__('sec'));
+        $customHelper->sendLogEmail($logPath);
+        
+        // CODE FOR INDEXING
+        $indexingProcesses = Mage::getSingleton('index/indexer')->getProcessesCollection();
+        foreach ($indexingProcesses as $process) {
+            $process->reindexEverything();
+        }
+        ob_end_flush();
+        
+    } //uploadFile if condition end 
+} //post if condition end
+?>

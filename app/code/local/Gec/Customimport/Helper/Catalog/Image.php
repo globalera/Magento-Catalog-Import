@@ -1,7 +1,8 @@
 <?php
 /**
-#    Copyright (C) 2013 Global Era (http://www.globalera.com). All Rights Reserved
+#    Copyright (C) 2013-2015 Global Era Commerce (http://www.globalera.com). All Rights Reserved
 #    @author Serenus Infotech <magento@serenusinfotech.com>
+#    @author Intelliant <magento@intelliant.net>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -15,7 +16,7 @@
 #
 #    You should have received a copy of the GNU Affero General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-**/
+ **/
 
 class Gec_Customimport_Helper_Catalog_Image extends Mage_Catalog_Helper_Image
 {
@@ -89,53 +90,133 @@ class Gec_Customimport_Helper_Catalog_Image extends Mage_Catalog_Helper_Image
      */
     public function __toString()
     {
-        try {
-            // echo $this->_requestedImage;
+       if(Mage::getStoreConfig("catalog/proimgusage/imgusage")){
+            try {
+                $model = $this->_getModel();
+                if ($this->getImageFile()) {
+                    $model->setBaseFile($this->getImageFile());
+                } else {
+                    $path = Mage::getBaseDir('media').'/catalog/product';
+                    if($this->getProduct()->getData($model->getDestinationSubdir()) == "no_selection" || !is_file($path.$this->getProduct()->getData($model->getDestinationSubdir()))){
+                        try{
+                            $model = $this->_getModel();
+                            if ($this->getImageFile()) {
+                                $model->setBaseFile($this->getImageFile());
+                            } else {
+                                $model->setBaseFile($this->getProduct()->getData($model->getDestinationSubdir()));
+                            }
 
-            $model = $this->_getModel();
-            if ($this->getImageFile()) {
-                $model->setBaseFile($this->getImageFile());
-            } else {
-                $model->setBaseFile($this->getProduct()->getData($model->getDestinationSubdir()));
+                            if($this->_requestedImage == 'image' || $this->_requestedImage == 'small_image' || $this->_requestedImage == 'thumbnail'){
+                                $external_attribute = 'external_'.$this->_requestedImage;
+                                $_product = Mage::getModel('catalog/product')->load($this->getProduct()->getId());
+                                $externalImg = $_product->getData($external_attribute);
+
+                            }
+                            if ($model->isCached()) {
+                                if($externalImg){
+                                    return $externalImg;
+                                }
+                                return $model->getUrl();
+                            } else {
+                                if ($this->_scheduleRotate) {
+                                    $model->rotate($this->getAngle());
+                                }
+
+                                if ($this->_scheduleResize) {
+                                    $model->resize();
+                                }
+
+                                if ($this->getWatermark()) {
+                                    $model->setWatermark($this->getWatermark());
+                                }
+
+                                $url = $model->saveFile()->getUrl();
+                                if($externalImg){
+                                    $url =  $externalImg;
+                                }
+                            }
+                        }catch (Exception $e) {
+                            $url = Mage::getDesign()->getSkinUrl($this->getPlaceholder());
+                        }
+                        return $url;
+                    }else{
+                        $model->setBaseFile($this->getProduct()->getData($model->getDestinationSubdir()));
+                    }
+                }
+
+                if ($model->isCached()) {
+                    return $model->getUrl();
+                } else {
+                    if ($this->_scheduleRotate) {
+                        $model->rotate($this->getAngle());
+                    }
+
+                    if ($this->_scheduleResize) {
+                        $model->resize();
+                    }
+
+                    if ($this->getWatermark()) {
+                        $model->setWatermark($this->getWatermark());
+                    }
+
+                    $url = $model->saveFile()->getUrl();
+                }
+            } catch (Exception $e) {
+                $url = Mage::getDesign()->getSkinUrl($this->getPlaceholder());
             }
+            return $url;
+       } else { 
+        
+            try {
+                // echo $this->_requestedImage;
 
-            if($this->_requestedImage == 'image' || $this->_requestedImage == 'small_image' || $this->_requestedImage == 'thumbnail'){
-                $external_attribute = 'external_'.$this->_requestedImage;
-                $_product = Mage::getModel('catalog/product')->load($this->getProduct()->getId());
-                $externalImg = $_product->getData($external_attribute);
+                $model = $this->_getModel();
+                if ($this->getImageFile()) {
+                    $model->setBaseFile($this->getImageFile());
+                } else {
+                    $model->setBaseFile($this->getProduct()->getData($model->getDestinationSubdir()));
+                }
 
+                if($this->_requestedImage == 'image' || $this->_requestedImage == 'small_image' || $this->_requestedImage == 'thumbnail'){
+                    $external_attribute = 'external_'.$this->_requestedImage;
+                    $_product = Mage::getModel('catalog/product')->load($this->getProduct()->getId());
+                    $externalImg = $_product->getData($external_attribute);
+
+                }
+
+
+                if ($model->isCached()) {
+                    // return 'http://staging.serenusinfotech.com/smikum/gec/skin/frontend/default/default/images/media/col_left_callout.jpg';
+                    if($externalImg){
+                        return $externalImg;
+                    }
+                    return $model->getUrl();
+                } else {
+                    if ($this->_scheduleRotate) {
+                        $model->rotate($this->getAngle());
+                    }
+
+                    if ($this->_scheduleResize) {
+                        $model->resize();
+                    }
+
+                    if ($this->getWatermark()) {
+                        $model->setWatermark($this->getWatermark());
+                    }
+
+                    $url = $model->saveFile()->getUrl();
+                    if($externalImg){
+                        $url =  $externalImg;
+                    }
+                }
+            } catch (Exception $e) {
+                $url = Mage::getDesign()->getSkinUrl($this->getPlaceholder());
             }
-
-
-            if ($model->isCached()) {
-                // return 'http://staging.serenusinfotech.com/smikum/gec/skin/frontend/default/default/images/media/col_left_callout.jpg';
-                if($externalImg){
-                    return $externalImg;
-                }
-                return $model->getUrl();
-            } else {
-                if ($this->_scheduleRotate) {
-                    $model->rotate($this->getAngle());
-                }
-
-                if ($this->_scheduleResize) {
-                    $model->resize();
-                }
-
-                if ($this->getWatermark()) {
-                    $model->setWatermark($this->getWatermark());
-                }
-
-                $url = $model->saveFile()->getUrl();
-                if($externalImg){
-                    $url =  $externalImg;
-                }
-            }
-        } catch (Exception $e) {
-            $url = Mage::getDesign()->getSkinUrl($this->getPlaceholder());
-        }
-        return $url;
-        // return 'http://staging.serenusinfotech.com/smikum/gec/skin/frontend/default/default/images/media/col_left_callout.jpg';
-    }
-
-}
+            return $url;
+            // return 'http://staging.serenusinfotech.com/smikum/gec/skin/frontend/default/default/images/media/col_left_callout.jpg';
+            
+       }    // If condition over
+       
+    }  // Function over
+    
+}   // Class over

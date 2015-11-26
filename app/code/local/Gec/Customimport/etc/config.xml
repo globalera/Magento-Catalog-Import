@@ -1,30 +1,30 @@
 <?xml version="1.0"?>
-<!-- 
-/**
-#    Copyright (C) 2013 Global Era (http://www.globalera.com). All Rights Reserved
-#    @author Serenus Infotech <magento@serenusinfotech.com>
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as
-#    published by the Free Software Foundation, either version 3 of the
-#    License, or (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Affero General Public License for more details.
-#
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-**/
+<!--
+    Copyright (C) 2013 Global Era Commerce (http://www.globalera.com). All Rights Reserved
+    @author Serenus Infotech <magento@serenusinfotech.com>
+    @author Intelliant <magento@intelliant.net>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -->
+
 <config>
     <modules>
         <Gec_Customimport>
             <version>0.1.0</version>
         </Gec_Customimport>
     </modules>
-    <frontend>
+    <!--<frontend>
         <routers>
             <customimport>
                 <use>standard</use>
@@ -41,19 +41,29 @@
                 </customimport>
             </updates>
         </layout>
-    </frontend>
+    </frontend>-->
     <admin>
         <routers>
             <customimport>
                 <use>admin</use>
                 <args>
                     <module>Gec_Customimport</module>
-                    <frontName>customimport</frontName>
+                    <frontName>admin_customimport</frontName>
                 </args>
             </customimport>
         </routers>
     </admin>
     <global>
+    <template>
+            <email>
+                <!-- Give the template a uniqiue name, you'll need to refer to this later when sending the email-->
+                <import_status>
+                    <label>import_status</label>
+                    <file>import_status.html</file>
+                    <type>html</type>
+                </import_status>
+            </email>
+        </template>         
         <models>
             <customimport>
                 <class>Gec_Customimport_Model</class>
@@ -132,4 +142,42 @@
             </catalog>
         </helpers>
     </global>
+    <adminhtml>
+    <menu>
+      <catalog module="catalog">
+        <children>
+          <customimport module="customimport">
+            <title>Catalog Import</title>
+            <sort_order>0</sort_order>
+            <action>admin_customimport/adminhtml_index</action>
+          </customimport>
+        </children>
+      </catalog>
+    </menu>
+    <acl>
+      <resources>
+        <all>
+          <title>Allow Everything</title>
+        </all>
+        <admin>
+          <children>
+            <catalog translate="title" module="catalog">
+              <children>
+                  <customimport translate="title">
+                    <title>Custom Import</title>
+                  </customimport>
+              </children>
+            </catalog>
+          </children>
+        </admin>
+      </resources>
+    </acl>
+    <layout>
+      <updates>
+        <customimport>
+          <file>customimport.xml</file>
+        </customimport>
+      </updates>
+    </layout>
+  </adminhtml>
 </config>

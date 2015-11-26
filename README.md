@@ -1,4 +1,4 @@
 Magento-Catalog-Import
 ======================
 
-Import categories, products, and attributes into Magento
+Incremental import of categories, attributes and products into Magento

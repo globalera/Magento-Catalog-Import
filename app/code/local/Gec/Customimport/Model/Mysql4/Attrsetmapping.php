@@ -1,7 +1,8 @@
 <?php
 /**
-#    Copyright (C) 2013 Global Era (http://www.globalera.com). All Rights Reserved
+#    Copyright (C) 2013-2015 Global Era Commerce (http://www.globalera.com). All Rights Reserved
 #    @author Serenus Infotech <magento@serenusinfotech.com>
+#    @author Intelliant <magento@intelliant.net>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -15,7 +16,7 @@
 #
 #    You should have received a copy of the GNU Affero General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-**/
+ **/
 
 class Gec_Customimport_Model_Mysql4_Attrsetmapping extends Mage_Core_Model_Mysql4_Abstract {
 

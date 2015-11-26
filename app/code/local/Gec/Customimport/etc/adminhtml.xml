@@ -17,12 +17,25 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -->
-
 <config>
-         <modules>
-                <Gec_Customimport>
-                        <active>true</active>
-                        <codePool>local</codePool>
-                </Gec_Customimport> 
-         </modules>
-</config>
+        <acl>
+            <resources>
+                <admin>
+                    <children>
+                        <system>
+                            <children>
+                                <config>
+                                    <children>
+                                        <customimport translate="title" module="customimport">
+                                            <title>Catalog Import</title>
+                                            <sort_order>0</sort_order>
+                                        </customimport>
+                                    </children>
+                                </config>
+                            </children>
+                        </system>
+                    </children>
+                </admin>
+            </resources>
+        </acl>
+    </config>
