@@ -1,199 +1,132 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <catalog>
-	<categories> 
-		<category>
-			<id>100</id>
-            <name>Gizmos</name>
+    <categories>
+        <category>
+            <id>10000</id>
+            <name>Ecommerce Root</name>
             <isActive>Y</isActive>
-            <isRoot>N</isRoot>
+            <isRoot>Y</isRoot>
             <description></description>
             <metaKeywords></metaKeywords>
             <metaDescription></metaDescription>
             <pageTitle></pageTitle>
-            <imageUrl>http://picstube.files.wordpress.com/2011/12/google_logo_by_shawn015.jpg</imageUrl>
-         </category>
- 	 	 <category>
-            <id>200</id>
-            <name>Widgets</name>
-            <isActive>Y</isActive>
-            <isRoot>N</isRoot>
-            <description>Widgets</description>
-            <metaKeywords></metaKeywords>
-            <metaDescription></metaDescription>
-            <pageTitle></pageTitle>
-            <imageUrl>http://picstube.files.wordpress.com/2011/12/google_logo_by_shawn015.jpg</imageUrl>
+            <imageUrl></imageUrl>
         </category>
         <category>
-        	<id>CATALOG1</id>
-            <name>Demo Browse Root</name>
-            <isActive>Y</isActive>
-            <isRoot>Y</isRoot>
-            <description>&lt;b&gt;bold !&lt;b&gt;</description>
-            <metaKeywords></metaKeywords>
-            <metaDescription></metaDescription>
-            <pageTitle></pageTitle>
-            <imageUrl>http://picstube.files.wordpress.com/2011/12/google_logo_by_shawn015.jpg</imageUrl>
-        </category>
-        <category>
-            <id>201</id>
-            <name>Small Widgets</name>
+            <id>1196</id>
+            <name>dry erase boards</name>
             <isActive>Y</isActive>
             <isRoot>N</isRoot>
-            <description>Small Widgets</description>
+            <description>Also known as a whiteboard, this is a glossy, usually white surface for nonpermanent markings.</description>
             <metaKeywords></metaKeywords>
             <metaDescription></metaDescription>
             <pageTitle></pageTitle>
-            <imageUrl>http://www.wallpaperage.com/wp-content/uploads/2012/11/Google-logo-paint.jpg</imageUrl>
-        </category>
-  		<category>
-            <id>202</id>
-            <name>Large Widgets</name>
-            <isActive>Y</isActive>
-            <isRoot>N</isRoot>
-            <description>Large Widgets</description>
-            <metaKeywords></metaKeywords>
-            <metaDescription></metaDescription>
-            <pageTitle></pageTitle>
-            <imageUrl>http://www.wallpaperage.com/wp-content/uploads/2012/11/Google-logo-paint.jpg</imageUrl>
-        </category>
-        <category>
-            <id>2011</id>
-            <name>Mini Widgets</name>
-            <isActive>Y</isActive>
-            <isRoot>N</isRoot>
-            <description>Mini Widgets</description>
-            <metaKeywords></metaKeywords>
-            <metaDescription></metaDescription>
-            <pageTitle></pageTitle>
-            <imageUrl>http://www.wallpaperage.com/wp-content/uploads/2012/11/Google-logo-paint.jpg</imageUrl>
-        </category>
-        <category>
-            <id>2012</id>
-            <name>Other Mini Widgets</name>
-            <isActive>Y</isActive>
-            <isRoot>N</isRoot>
-            <description>Other Mini Widgets</description>
-            <metaKeywords></metaKeywords>
-            <metaDescription></metaDescription>
-            <pageTitle></pageTitle>
-            <imageUrl>http://weblogs.baltimoresun.com/news/technology/KalGoogleFiberimage.JPG</imageUrl>
+            <imageUrl>http://images.icecat.biz/img/low_pic/1196-7700.jpg</imageUrl>
         </category>
     </categories>
     <categoryRelations>
         <categoryRelation>
-            <parentId>200</parentId>
+            <parentId>10000</parentId>
             <subCategory>
-                <id>201</id>
-                <isActive>Y</isActive>
-                <position></position>
-            </subCategory>
-            <subCategory>
-                <id>202</id>
-                <isActive>Y</isActive>
-                <position></position>
-            </subCategory>
-        </categoryRelation>
-        <categoryRelation>
-            <parentId>201</parentId>
-            <subCategory>
-                <id>2011</id>
-                <isActive>Y</isActive>
-                <position></position>
-            </subCategory>
-            <subCategory>
-                <id>2012</id>
-                <isActive>Y</isActive>
-                <position></position>
-            </subCategory>
-        </categoryRelation>
-        <categoryRelation>
-            <parentId>100</parentId>
-            <subCategory>
-                <id>201</id>
-                <isActive>Y</isActive>
-                <position></position>
-            </subCategory>
-            <subCategory>
-                <id>202</id>
-                <isActive>Y</isActive>
-                <position></position>
-            </subCategory>
-        </categoryRelation>
-        <categoryRelation>
-            <parentId>CATALOG1</parentId>
-            <subCategory>
-                <id>100</id>
-                <isActive>Y</isActive>
-                <position></position>
-            </subCategory>
-            <subCategory>
-                <id>200</id>
+                <id>1196</id>
                 <isActive>Y</isActive>
                 <position></position>
             </subCategory>
         </categoryRelation>
     </categoryRelations>
     <attributeConfiguration>
-		<attribute>
-			<id>a_shirt_color_10000</id>
-	    	<type>select</type>
-            <name>Shirt Color</name>
+        <attribute>
+            <id>a_other_feature_1464</id>
+            <type>text</type>
+            <name>Height</name>
             <values>
                 <valueDef>
-                    <id>shirt-color-red</id>
-                    <value>Red</value>
-                </valueDef>
-                <valueDef>
-                    <id>shirt-color-blue</id>
-                    <value>Blue</value>
-                </valueDef>
- 				<valueDef>
-                    <id>shirt-color-green</id>
-                    <value>Green</value>
-                </valueDef>
-                <valueDef>
-                    <id>shirt-color-yellow</id>
-                    <value>Yellow</value>
+                    <id>111822</id>
+                    <value>121.9 cm</value>
                 </valueDef>
             </values>
         </attribute>
-  		<attribute>
-  			<id>a_shirt_size_10000</id>
-	    	<type>select</type>
-            <name>Shirt Size</name>
+        <attribute>
+            <id>a_other_feature_1766</id>
+            <type>multiselect</type>
+            <name>Colour of product</name>
             <values>
-            	<valueDef>
-                    <id>shirt-size-s</id>
-                    <value>Small</value>
-                </valueDef>
                 <valueDef>
-                    <id>shirt-size-m</id>
-                    <value>Medium</value>
+                    <id>13059</id>
+                    <value>White</value>
+                </valueDef>
+             </values>
+        </attribute>
+        <attribute>
+            <id>a_other_feature_5478</id>
+            <type>text</type>
+            <name>Height</name>
+            <values>
+                <valueDef>
+                    <id>178516</id>
+                    <value>10.16 cm (4&quot;)</value>
+                </valueDef>
+            </values>
+        </attribute>
+        <attribute>
+        <id>a_other_feature_1649</id>
+            <type>text</type>
+            <name>Width</name>
+            <values>
+                <valueDef>
+                    <id>249813</id>
+                    <value>2.438m</value>
+                </valueDef>
+            </values>
+        </attribute>
+        <attribute>
+            <id>a_other_feature_4157</id>
+            <type>text</type>
+            <name>Width</name>
+            <values>
+                <valueDef>
+                    <id>337490</id>
+                    <value>20.32 cm (8&quot;)</value>
                 </valueDef>
             </values>
         </attribute>
         <attributeGroup>
-            <id>10000</id>
-            <name>custom group</name>
+            <id>1196_OTHER_FEATURE</id>
+            <name>Feature Group for type [OTHER_FEATURE] features in category [1196]</name>
             <groupedAttributes>
                 <attribute>
-                    <id>a_shirt_color_10000</id>
+                    <id>a_other_feature_1464</id>
                     <isActive>Y</isActive>
                     <position></position>
                 </attribute>
-	        	<attribute>
-                    <id>a_shirt_size_10000</id>
+                <attribute>
+                    <id>a_other_feature_1766</id>
+                    <isActive>Y</isActive>
+                    <position></position>
+                </attribute>
+                <attribute>
+                    <id>a_other_feature_5478</id>
+                    <isActive>Y</isActive>
+                    <position></position>
+                </attribute>
+                <attribute>
+                    <id>a_other_feature_1649</id>
+                    <isActive>Y</isActive>
+                    <position></position>
+                </attribute>
+                <attribute>
+                    <id>a_other_feature_4157</id>
                     <isActive>Y</isActive>
                     <position></position>
                 </attribute>
             </groupedAttributes>
         </attributeGroup>
         <attributeSet>
-            <id>SERV-001</id>
-            <name>Shirt</name>
+            <id>1196</id>
+            <name>dry erase boards</name>
             <attributeGroups>
                 <attributeGroup>
-                    <id>10000</id>
+                    <id>1196_OTHER_FEATURE</id>
                     <isActive>Y</isActive>
                 </attributeGroup>
             </attributeGroups>
@@ -201,183 +134,93 @@
     </attributeConfiguration>
     <products>
         <product>
-            <id>CFSV1001</id>
-            <type>configurable</type>
-            <name>Designer shirt</name>
-            <isActive>Y</isActive>
-            <isTaxable>Y</isTaxable>
-            <isShippable>N</isShippable>
-            <shortDescription>The configurable product type which is received to- and shipped from inventory for demonstration use</shortDescription>
-            <longDescription>The configurable product type which is received to- and shipped from inventory for demonstration use</longDescription>
-            <metaKeywords></metaKeywords>
-            <metaDescription></metaDescription>
-            <pageTitle></pageTitle>
-            <smallImageUrl>http://weblogs.baltimoresun.com/news/technology/KalGoogleFiberimage.JPG</smallImageUrl>
-            <largeImageUrl>http://weblogs.baltimoresun.com/news/technology/KalGoogleFiberimage.JPG</largeImageUrl>
-            <originalImageUrl>http://weblogs.baltimoresun.com/news/technology/KalGoogleFiberimage.JPG</originalImageUrl>
-            <price>9.990</price>
-            <attributeSetId>SERV-001</attributeSetId>
-            <attributeValues>
-                <attribute>
-                    <id>a_shirt_color_10000</id>
-                    <valueDefId>shirt-color-yellow</valueDefId>
-                    <isActive>Y</isActive>
-                    <position>1</position>
-                </attribute>	
- 				<attribute>
-                    <id>a_shirt_color_10000</id>
-                    <valueDefId>shirt-color-green</valueDefId>
-                    <isActive>Y</isActive>
-                    <position>1</position>
-                </attribute>
- 	       		<attribute>
-                    <id>a_shirt_color_10000</id>
-                    <valueDefId>shirt-color-red</valueDefId>
-                    <isActive>Y</isActive>
-                    <position>1</position>
-                </attribute>
-				<attribute>
-                    <id>a_shirt_size_10000</id>
-                    <valueDefId>shirt-size-s</valueDefId>
-                    <isActive>Y</isActive>
-                    <position>1</position>
-                </attribute>
-				<attribute>
-                    <id>a_shirt_size_10000</id>
-                    <valueDefId>shirt-size-m</valueDefId>
-                    <isActive>Y</isActive>
-                    <position>1</position>
-                </attribute>
-            </attributeValues>            
-        </product>
- 		<product>
-            <id>SV-1000</id>
+            <id>1560180</id>
             <type>simple</type>
-            <name>Shirt-Yellow-L</name>
-            <isActive>Y</isActive>
-            <isTaxable>Y</isTaxable>
-            <isShippable>N</isShippable>
-            <shortDescription>Excellent product ! 20 star rating !!!</shortDescription>
-            <longDescription></longDescription>
-            <metaKeywords></metaKeywords>
-            <metaDescription></metaDescription>
-            <pageTitle></pageTitle>
-            <smallImageUrl>http://picstube.files.wordpress.com/2011/12/google_logo_by_shawn015.jpg</smallImageUrl>
-            <largeImageUrl>http://picstube.files.wordpress.com/2011/12/google_logo_by_shawn015.jpg</largeImageUrl>
-            <originalImageUrl>http://picstube.files.wordpress.com/2011/12/google_logo_by_shawn015.jpg</originalImageUrl>
-            <price>1000.000</price>
- 	    	<weight>7.000000</weight>
-            <attributeSetId>SERV-001</attributeSetId>
-    	    <attributeValues>
-        		<attribute>
-                    <id>a_shirt_color_10000</id>
-                    <valueDefId>shirt-color-yellow</valueDefId>
-                    <isActive>Y</isActive>
-                    <position>1</position>
-                </attribute>
-				<attribute>
-                    <id>a_shirt_size_10000</id>
-                    <valueDefId>shirt-size-s</valueDefId>
-                    <isActive>Y</isActive>
-                    <position>1</position>
-                </attribute>
-            </attributeValues>
-        </product>
- 		<product>
-            <id>SV-1001</id>
-            <type>simple</type>
-            <name>Shirt-Green-S</name>
+            <name>Nobo Elipse Drywipe Board</name>
             <isActive>Y</isActive>
             <isTaxable>Y</isTaxable>
             <isShippable>Y</isShippable>
-            <shortDescription>Excellent product</shortDescription>
-            <longDescription>Excellent product ! 15 star rating !!!</longDescription>
+            <shortDescription>Elipse Drywipe Board Melamine 1800 x 1200mm</shortDescription>
+            <longDescription>- Ideal for meeting rooms and personal workspaces.&lt;br/&gt;- Quality melamine drywipe surface - non-magnetic.&lt;br/&gt;- Contemporary aluminium frame.&lt;br/&gt;- High profile caps to cover wall fixings.&lt;br/&gt;- Pen, pen tray and mounting kit included.</longDescription>
             <metaKeywords></metaKeywords>
             <metaDescription></metaDescription>
             <pageTitle></pageTitle>
-            <smallImageUrl>http://picstube.files.wordpress.com/2011/12/google_logo_by_shawn015.jpg</smallImageUrl>
-            <largeImageUrl>http://picstube.files.wordpress.com/2011/12/google_logo_by_shawn015.jpg</largeImageUrl>
-            <originalImageUrl>http://picstube.files.wordpress.com/2011/12/google_logo_by_shawn015.jpg</originalImageUrl>
-            <price>10.990</price>
- 	   	 	<weight>7.000000</weight>
-            <attributeSetId>SERV-001</attributeSetId>
-            <attributeValues>
-                <attribute>
-                    <id>a_shirt_color_10000</id>
-                    <valueDefId>shirt-color-green</valueDefId>
-                    <isActive>Y</isActive>
-                    <position>1</position>
-                </attribute>
-				<attribute>
-                    <id>a_shirt_size_10000</id>
-                    <valueDefId>shirt-size-m</valueDefId>
-                    <isActive>Y</isActive>
-                    <position>1</position>
-                </attribute>
-            </attributeValues>
+            <smallImageUrl>http://images.icecat.biz/thumbs/1560180.jpg</smallImageUrl>
+            <largeImageUrl>http://images.icecat.biz/img/norm/low/1560180-8089.jpg</largeImageUrl>
+            <originalImageUrl>http://images.icecat.biz/img/norm/high/1560180-8089.jpg</originalImageUrl>
+            <attributeSetId>1196</attributeSetId>
+            <attributeValues/>
+            <inventory>
+                <manageStock>Y</manageStock>
+                <atp>0</atp>
+                <allowBackorders>N</allowBackorders>
+            </inventory>
         </product>
-  		<product>
-            <id>GZ-2644</id>
+        <product>
+            <id>24896064</id>
             <type>simple</type>
-            <name>Shirt-Red-M</name>
+            <name>3M Post-it 1.219 m x 2.438 m</name>
             <isActive>Y</isActive>
             <isTaxable>Y</isTaxable>
             <isShippable>Y</isShippable>
-            <shortDescription>Excellent product</shortDescription>
-            <longDescription>Excellent product ! 10 star rating !!!</longDescription>
+            <shortDescription>Post-it Dry Erase Surface DEF8x4, 4 ft x 8 ft (1.219 m x 2.438 m)</shortDescription>
+            <longDescription>The instant, flexible whiteboard solution. Transforms painted drywall, glass, painted steel, finished wood or even old dry erase and chalkboards into a dry erase surface. Stain-proof technology erases cleanly every time and is easy to write on.&lt;br/&gt;&lt;br/&gt;- Easy to install and requires no tools – just unroll, peel and stick&lt;br/&gt;- Stain-proof material erases cleanly every time&lt;br/&gt;- Smooth surface is easy to write on&lt;br/&gt;- Resurface old whiteboards or chalkboards to create a new dry erase board&lt;br/&gt;- Cut-to-fit surface allows you to customize your environment&lt;br/&gt;- Create horizontal collaborative spaces on tables and desks&lt;br/&gt;- Think big - cover an entire wall to inspire collaboration&lt;br/&gt;- 100% Satisfaction Guaranteed* - if this product does not meet your specific needs we will make it right!&lt;br/&gt;&lt;br/&gt;Set Collaboration Free. The Post-it® Dry Erase Surface is designed to stick to a variety of painted drywall and steel surfaces, glass, finished wood, and existing whiteboards or chalkboards. The Post-it® Dry Erase Surface is easy to install and requires no tools – just unroll, peel and stick. Utilizing a proprietary dry erase coating, the Post-it® Dry Erase Surface is stain-proof, erases cleanly every time and writes smoothly. From horizontal applications on desks or tables to vertical applications on surfaces where traditional whiteboards cannot be installed, such as windows, the Post-it® Dry Erase Surface can be cut-to-fit and provides endless possibilities for dry erase solutions in new places. It’s even great for replacing old dry erase surfaces that may be ghosted—simply apply over the existing board and it looks new again.</longDescription>
             <metaKeywords></metaKeywords>
             <metaDescription></metaDescription>
             <pageTitle></pageTitle>
-            <smallImageUrl>http://www.wallpaperage.com/wp-content/uploads/2012/11/Google-logo-paint.jpg</smallImageUrl>
-            <largeImageUrl>http://www.wallpaperage.com/wp-content/uploads/2012/11/Google-logo-paint.jpg</largeImageUrl>
-            <originalImageUrl>http://www.wallpaperage.com/wp-content/uploads/2012/11/Google-logo-paint.jpg</originalImageUrl>
-            <price>38.40000000000</price>
-            <weight>7.000000</weight>
-            <attributeSetId>SERV-001</attributeSetId>
-             <attributeValues>
+            <smallImageUrl>http://images.icecat.biz/img/gallery_thumbs/24896064_2649.jpg</smallImageUrl>
+            <largeImageUrl>http://images.icecat.biz/img/gallery_lows/24896064_2649.jpg</largeImageUrl>
+            <originalImageUrl>http://images.icecat.biz/img/gallery/24896064_2649.jpg</originalImageUrl>
+            <attributeSetId>1196</attributeSetId>
+            <attributeValues>
                 <attribute>
-                    <id>a_shirt_color_10000</id>
-                    <valueDefId>shirt-color-red</valueDefId>
+                    <id>a_other_feature_1464</id>
+                    <valueDefId>111822</valueDefId>
                     <isActive>Y</isActive>
-                    <position>1</position>
+                    <position></position>
                 </attribute>
-				<attribute>
-                    <id>a_shirt_size_10000</id>
-                    <valueDefId>shirt-size-s</valueDefId>
+                <attribute>
+                    <id>a_other_feature_1766</id>
+                    <valueDefId>13059</valueDefId>
                     <isActive>Y</isActive>
-                    <position>1</position>
+                    <position></position>
+                </attribute>
+                <attribute>
+                    <id>a_other_feature_5478</id>
+                    <valueDefId>178516</valueDefId>
+                    <isActive>Y</isActive>
+                    <position></position>
+                </attribute>
+                <attribute>
+                    <id>a_other_feature_1649</id>
+                    <valueDefId>249813</valueDefId>
+                    <isActive>Y</isActive>
+                    <position></position>
+                </attribute>
+                <attribute>
+                    <id>a_other_feature_4157</id>
+                    <valueDefId>337490</valueDefId>
+                    <isActive>Y</isActive>
+                    <position></position>
                 </attribute>
             </attributeValues>
+            <inventory>
+                <manageStock>Y</manageStock>
+                <atp>0</atp>
+                <allowBackorders>N</allowBackorders>
+            </inventory>
         </product>
     </products>
     <categoryProducts>
         <categoryProduct>
-            <categoryId>201</categoryId>
+            <categoryId>1196</categoryId>
             <product>
-                <id>CFSV1001</id>
+                <id>1560180</id>
                 <isActive>Y</isActive>
                 <position></position>
             </product>
             <product>
-                <id>SV-1000</id>
-                <isActive>Y</isActive>
-                <position></position>
-            </product>
-            <product>
-                <id>SV-1001</id>
-                <isActive>Y</isActive>
-                <position></position>
-            </product>
-        </categoryProduct>
-		<categoryProduct>
-            <categoryId>202</categoryId>
-            <product>
-                <id>SV-1000</id>
-                <isActive>Y</isActive>
-                <position></position>
-            </product>
-            <product>
-                <id>SV-1001</id>
+                <id>24896064</id>
                 <isActive>Y</isActive>
                 <position></position>
             </product>
@@ -385,39 +228,13 @@
     </categoryProducts>
     <productAssociations>
         <association>
-            <productIdFrom>CFSV1001</productIdFrom>
+            <productIdFrom>24896064</productIdFrom>
             <associatedProduct>
-                <id>SV-1000</id>
-                <assocType>3</assocType>
-                <isActive>Y</isActive>
-                <position></position>
-            </associatedProduct>
- 	    	<associatedProduct>
-                <id>SV-1001</id>
-                <assocType>3</assocType>
-                <isActive>Y</isActive>
-                <position></position>
-            </associatedProduct>
- 	   		<associatedProduct>
-                <id>GZ-2644</id>
-                <assocType>3</assocType>
-                <isActive>Y</isActive>
-                <position></position>
-            </associatedProduct>
-        </association>
-        <association>
-            <productIdFrom>SV-1001</productIdFrom>
-            <associatedProduct>
-                <id>GZ-2644</id>
+                <id>1560180</id>
                 <assocType>0</assocType>
                 <isActive>Y</isActive>
                 <position></position>
-            </associatedProduct>
-            <associatedProduct>
-                <id>GZ-2644</id>
-                <assocType>1</assocType>
-                <isActive>Y</isActive>
-                <position></position>
+                <quantity>1</quantity>
             </associatedProduct>
         </association>
     </productAssociations>
