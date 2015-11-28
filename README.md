@@ -30,6 +30,24 @@ Incremental import of categories, attributes and products into Magento
     Limit: Limits the number of new products fetched. Leave blank if you wish to display all products (not recommended).
 
 6. Setup import notification email address at Configuration >> Store Email Addresses >> Custom Email 1. (The Magento instance should have outgoing mail settings setup for this to work.)
+
+**Requirements :**
+* Magento version 1.7.0.0 or higher
+* PHP Compatibility:
+ * 5.4.0 - 5.5.30
+* Required PHP extensions:
+ * PDO_MySQL
+ * simplexml
+ * mcrypt
+ * hash
+ * GD
+ * DOM
+ * iconv
+ * curl
+* Recommended settings
+ * Safe_mode off
+ * Memory_limit no less than 512Mb (preferably 1024)
+ * max_execution_time to 3600 (This may be required to increase based on the size of the xml and time it may take to import)
  
 **Changelog :**
 
