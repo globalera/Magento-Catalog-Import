@@ -98,8 +98,8 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     {
         $xmlObj  = $this->_xmlObj;
         $xmlData = $xmlObj->getNode();
-        if ($xmlData->attributeConfiguration->attribute instanceof Varien_Simplexml_Element) {
-            return $xmlData->attributeConfiguration->attribute;
+        if ($xmlData->attributeConfiguration->attributes->attribute instanceof Varien_Simplexml_Element) {
+            return $xmlData->attributeConfiguration->attributes->attribute;
         }
     }
     
@@ -117,8 +117,8 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     {
         $xmlObj  = $this->_xmlObj;
         $xmlData = $xmlObj->getNode();
-        if ($xmlData->attributeConfiguration->attributeSet instanceof Varien_Simplexml_Element) {
-            return $xmlData->attributeConfiguration->attributeSet;
+        if ($xmlData->attributeConfiguration->attributeSets->attributeSet instanceof Varien_Simplexml_Element) {
+            return $xmlData->attributeConfiguration->attributeSets->attributeSet;
         }
     }
     
@@ -193,8 +193,8 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     {
         $xmlObj  = $this->_xmlObj;
         $xmlData = $xmlObj->getNode();
-        if ($xmlData->attributeConfiguration->attributeGroup instanceof Varien_Simplexml_Element) {
-            return $xmlData->attributeConfiguration->attributeGroup;
+        if ($xmlData->attributeConfiguration->attributeGroups->attributeGroup instanceof Varien_Simplexml_Element) {
+            return $xmlData->attributeConfiguration->attributeGroups->attributeGroup;
         }
     }
     
@@ -458,6 +458,40 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 $crossArray      = array();
                 $associatedArray = array();
                 $bundleArray     = array();
+				$preAssociatedArray = array();
+				$disAssociateArray = array(); 
+				$preRelatedArray    = array();
+				$preUpsellArray     = array();
+				$preCrossArray      =  array();
+ 
+                 if ($mainProduct->getTypeId() == "configurable") {
+                     $configurable = Mage::getModel('catalog/product_type_configurable')->setProduct($mainProduct);
+                    $simpleCollection = $configurable->getUsedProductCollection()->addAttributeToSelect('*')->addFilterByRequiredOptions();
+                    foreach($simpleCollection as $simpleProduct){
+                        $preAssociatedArray[] = $simpleProduct->getId();
+                    }
+                }
+                
+                $relatedCollection = $mainProduct->getRelatedLinkCollection();
+                foreach($relatedCollection as $item){
+                    $preRelatedArray[$item->getLinkedProductId()] = array(
+                                    'position' => $item->getPosition()
+                                );
+                }
+                
+                $upsellCollection = $mainProduct->getUpSellLinkCollection();
+                foreach($upsellCollection as $item){
+                    $preUpsellArray[$item->getLinkedProductId()] = array(
+                                    'position' => $item->getPosition()
+                                );
+                }
+                
+                $crossCollection = $mainProduct->getCrossSellLinkCollection();
+                foreach($crossCollection as $item){
+                    $preCrossArray[$item->getLinkedProductId()] = array(
+                                    'position' => $item->getPosition()
+                                );
+                }
                 foreach ($associate->associatedProduct as $association) {
                     if ($association instanceof Varien_Simplexml_Element) { // if associatedProduct is an object in form of <associatedProduct>
                         unset($prid);
@@ -465,32 +499,73 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                         if ($prid && (string) $association->isActive == 'Y') {
                             $position = (string) $association->position ? (string) $association->position : 0;
                             if ((string) $association->assocType == 0) {
-                                $crossArray[$prid] = array(
+                                $preCrossArray[$prid] = array(
                                     'position' => $position
                                 );
                             } else if ((string) $association->assocType == 1) {
-                                $upsellArray[$prid] = array(
+                                $preUpsellArray[$prid] = array(
                                     'position' => $position
                                 );
                             } else if ((string) $association->assocType == 2) {
-                                $relatedArray[$prid] = array(
+                                $preRelatedArray[$prid] = array(
                                     'position' => $position
                                 );
                             } else if ((string) $association->assocType == 3) {
-                                $associatedArray[] = $prid;
+                                $preAssociatedArray[] = $prid;
                                 $this->_changeVisibility($prid);
                             } else if ((string) $association->assocType == 4) {
                                 $bundleArray[]         = $prid;
                                 $bundleQuantityArray[] = (int) $association->quantity;
                                 $bundlePositionArray[] = (int) $position;
                             }
+                        } else if($prid && strtolower((string) $association->isActive) == 'n') {
+                           if ((string) $association->assocType == 0) {
+                                $crossArray[$prid] = array(
+                                    'position' => $position
+                                );
+                            } else if ((string) $association->assocType == 1) {
+                                 $upsellArray[$prid] = array(
+                                    'position' => $position
+                                );
+                            } else if ((string) $association->assocType == 2) {
+                                 $relatedArray[$prid] = array(
+                                    'position' => $position
+                                );
+                            } else if ((string) $association->assocType == 3) {
+                                 $disAssociateArray[] = $prid;
+                            }
                         }
                     }
                 }
-                $mainProduct->setCrossSellLinkData($crossArray);
-                $mainProduct->setUpSellLinkData($upsellArray);
-                $mainProduct->setRelatedLinkData($relatedArray);
-                if (count($bundleArray) > 0) {
+				
+				if(is_array($preAssociatedArray) && count($preAssociatedArray) > 0){
+                     $associatedArray = array_unique(array_diff($preAssociatedArray, $disAssociateArray));
+                }
+                
+                foreach($preRelatedArray as $preRelatedkey => $relatedPro){
+                    if (array_key_exists($preRelatedkey,$relatedArray)){
+                        unset($preRelatedArray[$preRelatedkey]);
+                    }
+                }
+                
+                foreach($preUpsellArray as $preUpsellkey => $upsellPro){
+                    if (array_key_exists($preUpsellkey,$upsellArray)){
+                        unset($preUpsellArray[$preUpsellkey]);
+                    }
+                }
+                
+                foreach($preCrossArray as $preCrosskey => $crossPro){
+                    if (array_key_exists($preCrosskey,$crossArray)){
+                        unset($preCrossArray[$preCrosskey]);
+                    }
+                }
+                
+                $mainProduct->setCrossSellLinkData($preCrossArray);
+                $mainProduct->setUpSellLinkData($preUpsellArray);
+                $mainProduct->setRelatedLinkData($preRelatedArray);
+                $mainProduct->save();
+				
+				if (count($bundleArray) > 0) {
                     $proobj        = Mage::getModel('catalog/product');
                     $productbundle = Mage::getModel('catalog/product')->setStoreId(0);
                     if ($productId) {
@@ -848,10 +923,10 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             foreach ($attributeValues->attribute as $attr) {
                 if (array_key_exists((string) $attr->id, $attributeOcuurance)) {
                     $attributeOcuurance[(string) $attr->id] = (int) $attributeOcuurance[(string) $attr->id] + 1;
-                    $attrPos[(string) $attr->id]            = (int) $attr->position;
                 } else {
                     $attributeOcuurance[(string) $attr->id]   = $i;
-                    $configAttributeValue[(string) $attr->id] = (string) $attr->valueDefId;
+                    $configAttributeValue[(string) $attr->id][] = (string) $attr->valueDefId;
+                    $configAttributeValue[(string) $attr->id][] = (string) $attr->value;
                 }
             }
             $config_attribute_array = array(); //attributes with single occurance
@@ -860,23 +935,23 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                     $config_attribute_array[] = $key;
                 }
             }
-            
+
             foreach ($config_attribute_array as $attr) {
-                $external_id = $configAttributeValue[$attr]; // valueDefId from XML for an attribute
+                $external_id = $configAttributeValue[$attr][0]; // valueDefId from XML for an attribute
                 $model       = Mage::getModel('catalog/resource_eav_attribute');
                 $loadedattr  = $model->loadByCode('catalog_product', $attr);
                 $attr_id     = $loadedattr->getAttributeId(); // attribute id of magento
                 $attr_type   = $loadedattr->getFrontendInput();
-                
-                if ($attr_type == 'select') {
+                if ($attr_type == 'select' || $attr_type == 'multiselect' || $attr_type == 'boolean') {
                     $mapObj    = Mage::getModel('customimport/customimport');
                     $option_id = $mapObj->isOptionExistsInAttribute($external_id, $attr_id);
-                    //  $product->setData($attr, (string)$item->name);
                     if ($option_id) {
                         $product->setData($attr, $option_id);
                     }
-                } else { //if attribute is textfield direct insert value
-                    $product->setData($attr, $external_id);
+                } else if ($attr_type == 'text' || $attr_type == 'textarea')
+                {
+                    $attr_value = $configAttributeValue[$attr][1];
+                    $product->setData($attr, $attr_value);
                 }
             }
             
@@ -999,11 +1074,10 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             foreach ($attributeValues->attribute as $attr) {
                 if (array_key_exists((string) $attr->id, $attributeOcuurance)) {
                     $attributeOcuurance[(string) $attr->id] = (int) $attributeOcuurance[(string) $attr->id] + 1;
-                    $attrPos[(string) $attr->id]            = (int) $attr->position;
                 } else {
                     $attributeOcuurance[(string) $attr->id]   = $i;
-                    $configAttributeValue[(string) $attr->id] = (string) $attr->valueDefId;
-                    $attrPos[(string) $attr->id]              = (int) $attr->position;
+                    $configAttributeValue[(string) $attr->id][] = (string) $attr->valueDefId;
+		    $configAttributeValue[(String) $attr->id][] = (String) $attr->value;
                 }
             }
             $superattribute_array   = array(); // attributes with multiple occurances
@@ -1035,7 +1109,6 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                         $attr_detail           = array(
                             'id' => NULL,
                             'label' => "$attribute_label",
-                            'position' => $attrPos[$attr_id],
                             'attribute_id' => $attr_id,
                             'attribute_code' => "$attribute_code",
                             'frontend_label' => "$attribute_label",
@@ -1048,20 +1121,21 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                     $product->setConfigurableAttributesData($attribute_detail);
                     $product->setCanSaveConfigurableAttributes(1);
                     foreach ($config_attribute_array as $attr) {
-                        $external_id = $configAttributeValue[$attr]; // valueDefId from XML for an attribute
+                        $external_id = $configAttributeValue[$attr][0]; // valueDefId from XML for an attribute
                         $model       = Mage::getModel('catalog/resource_eav_attribute');
                         $loadedattr  = $model->loadByCode('catalog_product', $attr);
                         $attr_id     = $loadedattr->getAttributeId(); // attribute id of magento
                         $attr_type   = $loadedattr->getFrontendInput();
-                        if ($attr_type == 'select') {
+                        if ($attr_type == 'select' || $attr_type == 'multiselect' || $attr_type == 'boolean') {
                             $mapObj    = Mage::getModel('customimport/customimport');
                             $option_id = $mapObj->isOptionExistsInAttribute($external_id, $attr_id);
                             if ($option_id) {
                                 $product->setData($attr, $option_id);
                             }
-                        } else //if attribute is textfield direct insert value
+                        } else if ($attr_type == 'text' || $attr_type == 'textarea')
                             {
-                            $product->setData($attr, $external_id);
+			                $attr_value = $configAttributeValue[$attr][1];
+                            $product->setData($attr, $attr_value);
                         }
                     }
                     try {
@@ -1204,18 +1278,26 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             $configAttributeValue = array(); // will use to take value of attributes that ocuures once
             $multiple_values      = array(); // stores an array of available values
             $i                    = 1;
+            $model      = Mage::getModel('catalog/resource_eav_attribute');
             foreach ($attributeValues->attribute as $attr) {
+                $loadedattr = $model->loadByCode('catalog_product', (string) $attr->id);
+                $attr_type = $loadedattr->getFrontendInput();
                 if (array_key_exists((string) $attr->id, $attributeOcuurance)) {
                     $multiple_values[(string) $attr->id][]  = (string) $attr->valueDefId;
                     $attributeOcuurance[(string) $attr->id] = (int) $attributeOcuurance[(string) $attr->id] + 1;
+                    if($attr_type == 'text' || $attr_type == 'textarea'){
+                        $multiple_values[(string) $attr->id][]  = (string) $attr->value;
+                    }
                 } else {
                     $multiple_values[(string) $attr->id][]  = (string) $attr->valueDefId;
                     $attributeOcuurance[(string) $attr->id] = $i;
+                    if($attr_type == 'text' || $attr_type == 'textarea'){
+                        $multiple_values[(string) $attr->id][]  = (string) $attr->value;
+                    }
                 }
             }
             $skipStatus = 0;
             foreach ($multiple_values as $attribute_code => $attribute_values) {
-                $model      = Mage::getModel('catalog/resource_eav_attribute');
                 $loadedattr = $model->loadByCode('catalog_product', $attribute_code);
                 $attr_id    = $loadedattr->getAttributeId(); // attribute id of magento
                 if (!$attr_id) {
@@ -1252,8 +1334,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                     }
                     
                     if ($attr_type == 'text' || $attr_type == 'textarea') {
-                        $optVal = Mage::getModel('customimport/customimport')->getOptVal($attribute_values[0]);
-                        $product->setData($attribute_code, $optVal->getValue());
+                        $product->setData($attribute_code, $attribute_values[1]);
                     } else if ($attr_type == 'boolean') {
                         $optVal = Mage::getSingleton('customimport/customimport')->getOptVal($attribute_values[0]);
                         if (strtolower($optVal->getValue()) == 'y' || strtolower($optVal->getValue()) == 'yes') {
@@ -1463,19 +1544,26 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             $configAttributeValue = array(); // will use to take value of attributes that ocuures once
             $multiple_values      = array();
             $i                    = 1;
+            $model      = Mage::getModel('catalog/resource_eav_attribute');
             foreach ($attributeValues->attribute as $attr) {
+                $loadedattr = $model->loadByCode('catalog_product', (string) $attr->id);
+                $attr_type = $loadedattr->getFrontendInput();
                 if (array_key_exists((string) $attr->id, $attributeOcuurance)) {
                     $multiple_values[(string) $attr->id][]  = (string) $attr->valueDefId;
                     $attributeOcuurance[(string) $attr->id] = (int) $attributeOcuurance[(string) $attr->id] + 1;
+                    if($attr_type == 'text' || $attr_type == 'textarea'){
+                        $multiple_values[(string) $attr->id][]  = (string) $attr->value;
+                    }
                 } else {
                     $multiple_values[(string) $attr->id][]  = (string) $attr->valueDefId;
                     $attributeOcuurance[(string) $attr->id] = $i;
-                    //  $configAttributeValue[(string)$attr->id] = (string)$attr->valueDefId;
+                    if($attr_type == 'text' || $attr_type == 'textarea'){
+                        $multiple_values[(string) $attr->id][]  = (string) $attr->value;
+                    }
                 }
             }
             $skipStatus = 0;
             foreach ($multiple_values as $attribute_code => $attribute_values) {
-                $model      = Mage::getModel('catalog/resource_eav_attribute');
                 $loadedattr = $model->loadByCode('catalog_product', $attribute_code);
                 $attr_id    = $loadedattr->getAttributeId(); // attribute id of magento
                 if (!$attr_id) {
@@ -1509,8 +1597,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                         ));
                     }
                     if ($attr_type == 'text' || $attr_type == 'textarea') { // if type is text/textarea
-                        $optVal = Mage::getSingleton('customimport/customimport')->getOptVal($attribute_values[0]);
-                        $product->setData($attribute_code, $optVal->getValue());
+                        $product->setData($attribute_code, $attribute_values[1]);
                     } else if ($attr_type == 'boolean') {
                         $optVal = Mage::getSingleton('customimport/customimport')->getOptVal($attribute_values[0]);
                         if (strtolower($optVal->getValue()) == 'y' || strtolower($optVal->getValue()) == 'yes') {
@@ -2028,18 +2115,17 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
         if ($attr_id != '') {
             $attr->addData($_attribute_data);
             $option['attribute_id'] = $attr_id;
-            
-            if ($count_value > 0 && ($attribute_type == 'select' || $attribute_type == 'multiselect' || $attribute_type == 'text' || $attribute_type == 'textarea' || $attribute_type == 'boolean')) {
+            if ($count_value > 0 && ($attribute_type == 'select' || $attribute_type == 'multiselect' || $attribute_type == 'boolean')) {
                 for ($i = 0; $i < $count_value; $i++) {
                     $attrdet  = $attr_values['valueDef'][$i];
                     $optionId = $mapobj->isOptionExistsInAttribute($attrdet->id, $attr_id);
                     if (!isset($optionId)) {
                         $option['value']['option_' . $i][0]   = $attrdet->value;
-                        $option['order']['option_' . $i]      = $i;
+                        $option['order']['option_' . $i]      = $attrdet->position;
                         $option['externalid']['option_' . $i] = $attrdet->id;
                     } else {
                         $option['value'][$optionId][0]   = $attrdet->value;
-                        $option['order'][$optionId]      = $i;
+                        $option['order'][$optionId]      = $attrdet->position;
                         $option['externalid'][$optionId] = $attrdet->id;
                     }
                     $attr->setOption($option);
@@ -2081,11 +2167,11 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                         $optionId = $mapobj->isOptionExistsInAttribute($attrdet->id, $attr_id);
                         if (!isset($optionId)) {
                             $option['value']['option_' . $i][0]   = $attrdet->value;
-                            $option['order']['option_' . $i]      = $i;
+                            $option['order']['option_' . $i]      = $attrdet->position;
                             $option['externalid']['option_' . $i] = $attrdet->id;
                         } else {
                             $option['value'][$optionId][0]   = $attrdet->value;
-                            $option['order'][$optionId]      = $i;
+                            $option['order'][$optionId]      = $attrdet->position;
                             $option['externalid'][$optionId] = $attrdet->id;
                         }
                     }
