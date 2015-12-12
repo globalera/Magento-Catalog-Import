@@ -23,6 +23,17 @@
             <pageTitle></pageTitle>
             <imageUrl>http://images.icecat.biz/img/low_pic/1196-7700.jpg</imageUrl>
         </category>
+        <category>
+            <id>10101</id>
+            <name>Head Gear</name>
+            <isActive>Y</isActive>
+            <isRoot>N</isRoot>
+            <description>Hats. They were so popular decades ago and then it all stopped. Times change as they say. The good news is that they are definitely back. You’ll see them touted around in Hollywood by the likes of Johny Depp.</description>
+            <metaKeywords></metaKeywords>
+            <metaDescription></metaDescription>
+            <pageTitle></pageTitle>
+            <imageUrl>http://s18.postimg.org/9gnq9zq15/hat.jpg</imageUrl>
+        </category>
     </categories>
     <categoryRelations>
         <categoryRelation>
@@ -33,104 +44,154 @@
                 <position></position>
             </subCategory>
         </categoryRelation>
+        <categoryRelation>
+            <parentId>10000</parentId>
+            <subCategory>
+                <id>10101</id>
+                <isActive>Y</isActive>
+                <position></position>
+            </subCategory>
+        </categoryRelation>
     </categoryRelations>
     <attributeConfiguration>
-        <attribute>
-            <id>a_other_feature_1464</id>
-            <type>text</type>
-            <name>Height</name>
-            <values>
-                <valueDef>
-                    <id>111822</id>
-                    <value>121.9 cm</value>
-                </valueDef>
-            </values>
-        </attribute>
-        <attribute>
-            <id>a_other_feature_1766</id>
-            <type>multiselect</type>
-            <name>Colour of product</name>
-            <values>
-                <valueDef>
-                    <id>13059</id>
-                    <value>White</value>
-                </valueDef>
-             </values>
-        </attribute>
-        <attribute>
-            <id>a_other_feature_5478</id>
-            <type>text</type>
-            <name>Height</name>
-            <values>
-                <valueDef>
-                    <id>178516</id>
-                    <value>10.16 cm (4&quot;)</value>
-                </valueDef>
-            </values>
-        </attribute>
-        <attribute>
-        <id>a_other_feature_1649</id>
-            <type>text</type>
-            <name>Width</name>
-            <values>
-                <valueDef>
-                    <id>249813</id>
-                    <value>2.438m</value>
-                </valueDef>
-            </values>
-        </attribute>
-        <attribute>
-            <id>a_other_feature_4157</id>
-            <type>text</type>
-            <name>Width</name>
-            <values>
-                <valueDef>
-                    <id>337490</id>
-                    <value>20.32 cm (8&quot;)</value>
-                </valueDef>
-            </values>
-        </attribute>
-        <attributeGroup>
-            <id>1196_OTHER_FEATURE</id>
-            <name>Feature Group for type [OTHER_FEATURE] features in category [1196]</name>
-            <groupedAttributes>
-                <attribute>
-                    <id>a_other_feature_1464</id>
-                    <isActive>Y</isActive>
-                    <position></position>
-                </attribute>
-                <attribute>
-                    <id>a_other_feature_1766</id>
-                    <isActive>Y</isActive>
-                    <position></position>
-                </attribute>
-                <attribute>
-                    <id>a_other_feature_5478</id>
-                    <isActive>Y</isActive>
-                    <position></position>
-                </attribute>
-                <attribute>
-                    <id>a_other_feature_1649</id>
-                    <isActive>Y</isActive>
-                    <position></position>
-                </attribute>
-                <attribute>
-                    <id>a_other_feature_4157</id>
-                    <isActive>Y</isActive>
-                    <position></position>
-                </attribute>
-            </groupedAttributes>
-        </attributeGroup>
-        <attributeSet>
-            <id>1196</id>
-            <name>dry erase boards</name>
-            <attributeGroups>
-                <attributeGroup>
-                    <id>1196_OTHER_FEATURE</id>
-                    <isActive>Y</isActive>
-                </attributeGroup>
-            </attributeGroups>
-        </attributeSet>
+        <attributes>
+            <attribute>
+                <id>a_other_feature_1464</id>
+                <type>text</type>
+                <name>Height</name>
+                <values/>
+            </attribute>
+            <attribute>
+                <id>a_other_feature_5478</id>
+                <type>text</type>
+                <name>Length</name>
+                <values/>
+            </attribute>
+            <attribute>
+                <id>a_other_feature_1649</id>
+                <type>text</type>
+                <name>Depth</name>
+                <values/>
+            </attribute>
+            <attribute>
+                <id>a_other_feature_4157</id>
+                <type>text</type>
+                <name>Width</name>
+                <values/>
+            </attribute>
+            <attribute>
+                <id>a_other_feature_1766</id>
+                <type>multiselect</type>
+                <name>Colour of product</name>
+                <values>
+                    <valueDef>
+                        <id>13059</id>
+                        <value>White</value>
+                    </valueDef>
+                    <valueDef>
+                        <id>13060</id>
+                        <value>Beige</value>
+                    </valueDef>
+                </values>
+            </attribute>
+            <attribute>
+                <id>a_size_10001</id>
+                <type>select</type>
+                <name>Size</name>
+                <values>
+                    <valueDef>
+                        <id>10043</id>
+                        <value>XS</value>
+                    </valueDef>
+                    <valueDef>
+                        <id>10008</id>
+                        <value>Small</value>
+                    </valueDef>
+                    <valueDef>
+                        <id>10009</id>
+                        <value>Medium</value>
+                    </valueDef>
+                    <valueDef>
+                        <id>10010</id>
+                        <value>Large</value>
+                    </valueDef>
+                    <valueDef>
+                        <id>10044</id>
+                        <value>XL</value>
+                    </valueDef>
+                </values>
+            </attribute>
+        </attributes>
+        <attributeGroups>
+            <attributeGroup>
+                <id>1196_OTHER_FEATURE</id>
+                <name>Feature Group for type [OTHER_FEATURE] features in category [1196]</name>
+                <groupedAttributes>
+                    <attribute>
+                        <id>a_other_feature_1464</id>
+                        <isActive>Y</isActive>
+                        <position></position>
+                    </attribute>
+                    <attribute>
+                        <id>a_other_feature_1766</id>
+                        <isActive>Y</isActive>
+                        <position></position>
+                    </attribute>
+                    <attribute>
+                        <id>a_other_feature_5478</id>
+                        <isActive>Y</isActive>
+                        <position></position>
+                    </attribute>
+                    <attribute>
+                        <id>a_other_feature_1649</id>
+                        <isActive>Y</isActive>
+                        <position></position>
+                    </attribute>
+                    <attribute>
+                        <id>a_other_feature_4157</id>
+                        <isActive>Y</isActive>
+                        <position></position>
+                    </attribute>
+                </groupedAttributes>
+            </attributeGroup>
+            <attributeGroup>
+                <id>10101_SIZE</id>
+                <name>Feature Group for type [SIZE] features in category [10101]</name>
+                <groupedAttributes>
+                    <attribute>
+                        <id>a_size_10001</id>
+                        <isActive>Y</isActive>
+                        <position></position>
+                    </attribute>
+                </groupedAttributes>
+            </attributeGroup>
+        </attributeGroups>
+        <attributeSets>
+            <attributeSet>
+                <id>1196</id>
+                <name>dry erase boards</name>
+                <attributeGroups>
+                    <attributeGroup>
+                        <id>1196_OTHER_FEATURE</id>
+                        <isActive>Y</isActive>
+                    </attributeGroup>
+                </attributeGroups>
+            </attributeSet>
+            <attributeSet>
+                <id>10101</id>
+                <name>Hats</name>
+                <attributeGroups>
+                    <attributeGroup>
+                        <id>10101_SIZE</id>
+                        <isActive>Y</isActive>
+                    </attributeGroup>
+                    <attributeGroup>
+                        <id>1196_OTHER_FEATURE</id>
+                        <isActive>Y</isActive>
+                    </attributeGroup>
+                </attributeGroups>
+            </attributeSet>
+        </attributeSets>
     </attributeConfiguration>
     <products>
         <product>
@@ -175,39 +236,260 @@
             <attributeValues>
                 <attribute>
                     <id>a_other_feature_1464</id>
-                    <valueDefId>111822</valueDefId>
+                    <valueDefId></valueDefId>
+                    <value>121.9 cm</value>
                     <isActive>Y</isActive>
-                    <position></position>
                 </attribute>
                 <attribute>
                     <id>a_other_feature_1766</id>
                     <valueDefId>13059</valueDefId>
                     <isActive>Y</isActive>
-                    <position></position>
                 </attribute>
                 <attribute>
                     <id>a_other_feature_5478</id>
-                    <valueDefId>178516</valueDefId>
+                    <valueDefId></valueDefId>
+                    <value>10.16 cm (4&quot;)</value>
                     <isActive>Y</isActive>
-                    <position></position>
                 </attribute>
                 <attribute>
                     <id>a_other_feature_1649</id>
-                    <valueDefId>249813</valueDefId>
+                    <valueDefId></valueDefId>
+                    <value>2.438 m</value>
                     <isActive>Y</isActive>
-                    <position></position>
                 </attribute>
                 <attribute>
                     <id>a_other_feature_4157</id>
-                    <valueDefId>337490</valueDefId>
+                    <valueDefId></valueDefId>
+                    <value>20.32 cm (8&quot;)</value>
                     <isActive>Y</isActive>
-                    <position></position>
                 </attribute>
             </attributeValues>
             <inventory>
                 <manageStock>Y</manageStock>
                 <atp>0</atp>
                 <allowBackorders>N</allowBackorders>
+            </inventory>
+        </product>
+        <product>
+            <id>H0010M</id>
+            <type>simple</type>
+            <name>Hat, Medium</name>
+            <isActive>Y</isActive>
+            <isTaxable>Y</isTaxable>
+            <isShippable>Y</isShippable>
+            <shortDescription>Based on an authentic design that still looks contemporary, this Hat is equally attractive on both men and women. Think of it as a catchy accessory to add a spark to everyday wear.</shortDescription>
+            <longDescription>A more popular hat, it has a length wise crease and it is made of soft felt. There was a period in the 70’s and 80’s where the hat fell out of fashion amongst the young crowd; however, Hollywood is definitely bringing it back into style.</longDescription>
+            <metaKeywords></metaKeywords>
+            <metaDescription></metaDescription>
+            <pageTitle></pageTitle>
+            <smallImageUrl>http://s18.postimg.org/5x1sk6nb9/hat.jpg</smallImageUrl>
+            <largeImageUrl>http://s18.postimg.org/9gnq9zq15/hat.jpg</largeImageUrl>
+            <originalImageUrl>http://s18.postimg.org/9gnq9zq15/hat.jpg</originalImageUrl>
+            <price>113.00</price>
+            <attributeSetId>10101</attributeSetId>
+            <attributeValues>
+                <attribute>
+                    <id>a_size_10001</id>
+                    <valueDefId>10009</valueDefId>
+                    <value></value>
+                    <isActive>Y</isActive>
+                </attribute>
+            </attributeValues>
+            <inventory>
+                <atp>0.000000</atp>
+                <allowBackorders>N</allowBackorders>
+                <manageStock>N</manageStock>
+            </inventory>
+        </product>
+        <product>
+            <id>H0010L</id>
+            <type>simple</type>
+            <name>Hat, Large</name>
+            <isActive>Y</isActive>
+            <isTaxable>Y</isTaxable>
+            <isShippable>Y</isShippable>
+            <shortDescription>Based on an authentic design that still looks contemporary, this Hat is equally attractive on both men and women. Think of it as a catchy accessory to add a spark to everyday wear.</shortDescription>
+            <longDescription>A more popular hat, it has a length wise crease and it is made of soft felt. There was a period in the 70’s and 80’s where the hat fell out of fashion amongst the young crowd; however, Hollywood is definitely bringing it back into style.</longDescription>
+            <metaKeywords></metaKeywords>
+            <metaDescription></metaDescription>
+            <pageTitle></pageTitle>
+            <smallImageUrl>https://d3v0wwxrwjl9f8.cloudfront.net/media/catalog/cdn/y0010-sm.jpg</smallImageUrl>
+            <largeImageUrl>https://d3v0wwxrwjl9f8.cloudfront.net/media/catalog/cdn/y0010-sm.jpg</largeImageUrl>
+            <originalImageUrl>https://d3v0wwxrwjl9f8.cloudfront.net/media/catalog/cdn/y0010.jpg</originalImageUrl>
+            <price>113.00</price>
+            <attributeSetId>10101</attributeSetId>
+            <attributeValues>
+                <attribute>
+                    <id>a_size_10001</id>
+                    <valueDefId>10010</valueDefId>
+                    <value></value>
+                    <isActive>Y</isActive>
+                </attribute>
+            </attributeValues>
+            <inventory>
+                <atp>0.000000</atp>
+                <allowBackorders>N</allowBackorders>
+                <manageStock>N</manageStock>
+            </inventory>
+        </product>
+        <product>
+            <id>H0010-C</id>
+            <type>configurable</type>
+            <name>Hat</name>
+            <isActive>Y</isActive>
+            <isTaxable>Y</isTaxable>
+            <isShippable>Y</isShippable>
+            <shortDescription>Based on an authentic design that still looks contemporary, this Hat is equally attractive on both men and women. Think of it as a catchy accessory to add a spark to everyday wear.</shortDescription>
+            <longDescription>A more popular hat, it has a length wise crease and it is made of soft felt. There was a period in the 70’s and 80’s where the hat fell out of fashion amongst the young crowd; however, Hollywood is definitely bringing it back into style.</longDescription>
+            <metaKeywords></metaKeywords>
+            <metaDescription></metaDescription>
+            <pageTitle></pageTitle>
+            <smallImageUrl>http://s18.postimg.org/5x1sk6nb9/hat.jpg</smallImageUrl>
+            <largeImageUrl>http://s18.postimg.org/9gnq9zq15/hat.jpg</largeImageUrl>
+            <originalImageUrl>http://s18.postimg.org/9gnq9zq15/hat.jpg</originalImageUrl>
+            <price>113.00</price>
+            <attributeSetId>10101</attributeSetId>
+            <attributeValues>
+                <attribute>
+                    <id>a_size_10001</id>
+                    <valueDefId>10008</valueDefId>
+                    <value></value>
+                    <isActive>Y</isActive>
+                </attribute>
+                <attribute>
+                    <id>a_size_10001</id>
+                    <valueDefId>10009</valueDefId>
+                    <value></value>
+                    <isActive>Y</isActive>
+                </attribute>
+                <attribute>
+                    <id>a_size_10001</id>
+                    <valueDefId>10010</valueDefId>
+                    <value></value>
+                    <isActive>Y</isActive>
+                </attribute>
+                <attribute>
+                    <id>a_size_10001</id>
+                    <valueDefId>10043</valueDefId>
+                    <value></value>
+                    <isActive>Y</isActive>
+                </attribute>
+                <attribute>
+                    <id>a_size_10001</id>
+                    <valueDefId>10044</valueDefId>
+                    <value></value>
+                    <isActive>Y</isActive>
+                </attribute>
+                <attribute>
+                    <id>a_other_feature_1464</id>
+                    <valueDefId></valueDefId>
+                    <value>121.9 cm</value>
+                    <isActive>Y</isActive>
+                </attribute>
+                <attribute>
+                    <id>a_other_feature_1766</id>
+                    <valueDefId>13060</valueDefId>
+                    <value></value>
+                    <isActive>Y</isActive>
+                </attribute>
+            </attributeValues>
+            <inventory>
+                <atp>0</atp>
+                <allowBackorders>N</allowBackorders>
+                <manageStock>N</manageStock>
+            </inventory>
+        </product>
+        <product>
+            <id>H0010XS</id>
+            <type>simple</type>
+            <name>Hat, XS</name>
+            <isActive>Y</isActive>
+            <isTaxable>Y</isTaxable>
+            <isShippable>Y</isShippable>
+            <shortDescription>Based on an authentic design that still looks contemporary, this Hat is equally attractive on both men and women. Think of it as a catchy accessory to add a spark to everyday wear.</shortDescription>
+            <longDescription>A more popular hat, it has a length wise crease and it is made of soft felt. There was a period in the 70’s and 80’s where the hat fell out of fashion amongst the young crowd; however, Hollywood is definitely bringing it back into style.</longDescription>
+            <metaKeywords></metaKeywords>
+            <metaDescription></metaDescription>
+            <pageTitle></pageTitle>
+            <smallImageUrl>http://s18.postimg.org/5x1sk6nb9/hat.jpg</smallImageUrl>
+            <largeImageUrl>http://s18.postimg.org/9gnq9zq15/hat.jpg</largeImageUrl>
+            <originalImageUrl>http://s18.postimg.org/9gnq9zq15/hat.jpg</originalImageUrl>
+            <price>113.00</price>
+            <attributeSetId>10101</attributeSetId>
+            <attributeValues>
+                <attribute>
+                    <id>a_size_10001</id>
+                    <valueDefId>10043</valueDefId>
+                    <value></value>
+                    <isActive>Y</isActive>
+                </attribute>
+            </attributeValues>
+            <inventory>
+                <atp>0.000000</atp>
+                <allowBackorders>N</allowBackorders>
+                <manageStock>N</manageStock>
+            </inventory>
+        </product>
+        <product>
+            <id>H0010S</id>
+            <type>simple</type>
+            <name>Hat, Small</name>
+            <isActive>Y</isActive>
+            <isTaxable>Y</isTaxable>
+            <isShippable>Y</isShippable>
+            <shortDescription>Based on an authentic design that still looks contemporary, this Hat is equally attractive on both men and women. Think of it as a catchy accessory to add a spark to everyday wear.</shortDescription>
+            <longDescription>A more popular hat, it has a length wise crease and it is made of soft felt. There was a period in the 70’s and 80’s where the hat fell out of fashion amongst the young crowd; however, Hollywood is definitely bringing it back into style.</longDescription>
+            <metaKeywords></metaKeywords>
+            <metaDescription></metaDescription>
+            <pageTitle></pageTitle>
+            <smallImageUrl>http://s18.postimg.org/5x1sk6nb9/hat.jpg</smallImageUrl>
+            <largeImageUrl>http://s18.postimg.org/9gnq9zq15/hat.jpg</largeImageUrl>
+            <originalImageUrl>http://s18.postimg.org/9gnq9zq15/hat.jpg</originalImageUrl>
+            <price>113.00</price>
+            <attributeSetId>10101</attributeSetId>
+            <attributeValues>
+                <attribute>
+                    <id>a_size_10001</id>
+                    <valueDefId>10008</valueDefId>
+                    <value></value>
+                    <isActive>Y</isActive>
+                </attribute>
+            </attributeValues>
+            <inventory>
+                <atp>0.000000</atp>
+                <allowBackorders>N</allowBackorders>
+                <manageStock>N</manageStock>
+            </inventory>
+        </product>
+        <product>
+            <id>H0010XL</id>
+            <type>simple</type>
+            <name>Hat, XL</name>
+            <isActive>Y</isActive>
+            <isTaxable>Y</isTaxable>
+            <isShippable>Y</isShippable>
+            <shortDescription>Based on an authentic design that still looks contemporary, this Hat is equally attractive on both men and women. Think of it as a catchy accessory to add a spark to everyday wear.</shortDescription>
+            <longDescription>A more popular hat, it has a length wise crease and it is made of soft felt. There was a period in the 70’s and 80’s where the hat fell out of fashion amongst the young crowd; however, Hollywood is definitely bringing it back into style.</longDescription>
+            <metaKeywords></metaKeywords>
+            <metaDescription></metaDescription>
+            <pageTitle></pageTitle>
+            <smallImageUrl>http://s18.postimg.org/5x1sk6nb9/hat.jpg</smallImageUrl>
+            <largeImageUrl>http://s18.postimg.org/9gnq9zq15/hat.jpg</largeImageUrl>
+            <originalImageUrl>http://s18.postimg.org/9gnq9zq15/hat.jpg</originalImageUrl>
+            <price>113.00</price>
+            <attributeSetId>10101</attributeSetId>
+            <attributeValues>
+                <attribute>
+                    <id>a_size_10001</id>
+                    <valueDefId>10044</valueDefId>
+                    <value></value>
+                    <isActive>Y</isActive>
+                </attribute>
+            </attributeValues>
+            <inventory>
+                <atp>0.000000</atp>
+                <allowBackorders>N</allowBackorders>
+                <manageStock>N</manageStock>
             </inventory>
         </product>
     </products>
@@ -225,6 +507,14 @@
                 <position></position>
             </product>
         </categoryProduct>
+        <categoryProduct>
+            <categoryId>10101</categoryId>
+            <product>
+                <id>H0010-C</id>
+                <isActive>Y</isActive>
+                <position></position>
+            </product>
+        </categoryProduct>
     </categoryProducts>
     <productAssociations>
         <association>
@@ -232,6 +522,44 @@
             <associatedProduct>
                 <id>1560180</id>
                 <assocType>0</assocType>
+                <isActive>Y</isActive>
+                <position></position>
+                <quantity>1</quantity>
+            </associatedProduct>
+        </association>
+        <association>
+            <productIdFrom>H0010-C</productIdFrom>
+            <associatedProduct>
+                <id>H0010XL</id>
+                <assocType>3</assocType>
+                <isActive>Y</isActive>
+                <position></position>
+                <quantity>1</quantity>
+            </associatedProduct>
+            <associatedProduct>
+                <id>H0010L</id>
+                <assocType>3</assocType>
+                <isActive>Y</isActive>
+                <position></position>
+                <quantity>1</quantity>
+            </associatedProduct>
+            <associatedProduct>
+                <id>H0010M</id>
+                <assocType>3</assocType>
+                <isActive>Y</isActive>
+                <position></position>
+                <quantity>1</quantity>
+            </associatedProduct>
+            <associatedProduct>
+                <id>H0010S</id>
+                <assocType>3</assocType>
+                <isActive>Y</isActive>
+                <position></position>
+                <quantity>1</quantity>
+            </associatedProduct>
+            <associatedProduct>
+                <id>H0010XS</id>
+                <assocType>3</assocType>
                 <isActive>Y</isActive>
                 <position></position>
                 <quantity>1</quantity>
