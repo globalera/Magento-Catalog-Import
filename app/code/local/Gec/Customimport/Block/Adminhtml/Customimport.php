@@ -173,7 +173,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 $modelSet->validate();
                 $modelSet->save();
             } catch (Exception $e) {
-                $this->customHelper->reportError($this->customHelper->__('Attribute set name %s with id %s already exists in magento system with the same name', $attribute_set_name, $external_id))
+                $this->customHelper->reportError($this->customHelper->__('Attribute set name %s with id %s already exists in magento system with the same name', $attribute_set_name, $external_id));
             }
             return $attributeSetId;
         }
