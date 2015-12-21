@@ -169,8 +169,12 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 Mage::throwException($this->customHelper->__('This attribute set no longer exists.'));
             }
             $modelSet->setAttributeSetName(trim($attribute_set_name));
-            $modelSet->validate();
-            $modelSet->save();
+            try {
+                $modelSet->validate();
+                $modelSet->save();
+            } catch (Exception $e) {
+                $this->customHelper->reportError($this->customHelper->__('Attribute set name %s with id %s already exists in magento system with the same name', $attribute_set_name, $external_id))
+            }
             return $attributeSetId;
         }
         
@@ -336,11 +340,15 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
         if ($attributeGroupId) {
             $setup            = new Mage_Eav_Model_Entity_Setup('core_setup');
             $attribute_id     = $setup->getAttributeId('catalog_product', $attribute_code);
-            $attribute_exists = $mapobj->isAttributeExistsInGroup($attribute_id, $attributeGroupId);
-            if ($attribute_exists) {
-                $mapobj->updateSequenceOfAttribute($attributeGroupId, $attribute_id, $attribute_sort_order, $attribute_code);
+            if (!$attribute_id) {
+                $this->customHelper->reportError($this->customHelper->__("Attribute Code %s is missing during attribute group %s import."),$attribute_code, $attribute_group_id);
             } else {
-                $setup->addAttributeToGroup('catalog_product', $attributeSetId, $attributeGroupId, $attribute_id, $attribute_sort_order);
+                $attribute_exists = $mapobj->isAttributeExistsInGroup($attribute_id, $attributeGroupId);
+                if ($attribute_exists) {
+                    $mapobj->updateSequenceOfAttribute($attributeGroupId, $attribute_id, $attribute_sort_order, $attribute_code, $attribute_group_id);
+                } else {
+                    $setup->addAttributeToGroup('catalog_product', $attributeSetId, $attributeGroupId, $attribute_id, $attribute_sort_order);
+                }
             }
         }
     }
@@ -905,7 +913,6 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                     $product->setSpecialToDate("");
             }
             
-            $product->setWeight((real) $item->weight);
             $product->setStatus($p_status);
             $product->setTaxClassId($p_taxclass);    
             $product->setDescription((string) $item->longDescription);
@@ -1055,7 +1062,6 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 if (!empty($toDate))
                     $product->setSpecialToDate(Mage::helper('customimport')->getCurrentLocaleDateTime($item->specialPrice->toDateTime)); //special price to (MM-DD-YYYY)
             }
-            $product->setWeight((real) $item->weight);
             $product->setStatus($p_status);
             $product->setTaxClassId($p_taxclass);
             $product->setDescription((string) $item->longDescription);
