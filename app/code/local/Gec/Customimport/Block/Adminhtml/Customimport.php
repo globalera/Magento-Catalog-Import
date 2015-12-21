@@ -913,7 +913,6 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                     $product->setSpecialToDate("");
             }
             
-            $product->setWeight((real) $item->weight);
             $product->setStatus($p_status);
             $product->setTaxClassId($p_taxclass);    
             $product->setDescription((string) $item->longDescription);
@@ -1063,7 +1062,6 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 if (!empty($toDate))
                     $product->setSpecialToDate(Mage::helper('customimport')->getCurrentLocaleDateTime($item->specialPrice->toDateTime)); //special price to (MM-DD-YYYY)
             }
-            $product->setWeight((real) $item->weight);
             $product->setStatus($p_status);
             $product->setTaxClassId($p_taxclass);
             $product->setDescription((string) $item->longDescription);
