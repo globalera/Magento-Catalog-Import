@@ -340,11 +340,15 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
         if ($attributeGroupId) {
             $setup            = new Mage_Eav_Model_Entity_Setup('core_setup');
             $attribute_id     = $setup->getAttributeId('catalog_product', $attribute_code);
-            $attribute_exists = $mapobj->isAttributeExistsInGroup($attribute_id, $attributeGroupId);
-            if ($attribute_exists) {
-                $mapobj->updateSequenceOfAttribute($attributeGroupId, $attribute_id, $attribute_sort_order, $attribute_code, $attribute_group_id);
+            if (!$attribute_id) {
+                $this->customHelper->reportError($this->customHelper->__("Attribute Code %s is missing during attribute group %s import."),$attribute_code, $attribute_group_id);
             } else {
-                $setup->addAttributeToGroup('catalog_product', $attributeSetId, $attributeGroupId, $attribute_id, $attribute_sort_order);
+                $attribute_exists = $mapobj->isAttributeExistsInGroup($attribute_id, $attributeGroupId);
+                if ($attribute_exists) {
+                    $mapobj->updateSequenceOfAttribute($attributeGroupId, $attribute_id, $attribute_sort_order, $attribute_code, $attribute_group_id);
+                } else {
+                    $setup->addAttributeToGroup('catalog_product', $attributeSetId, $attributeGroupId, $attribute_id, $attribute_sort_order);
+                }
             }
         }
     }
