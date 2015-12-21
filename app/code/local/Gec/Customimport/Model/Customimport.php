@@ -94,7 +94,7 @@ class Gec_Customimport_Model_Customimport extends Mage_Core_Model_Abstract
         return $eaventityattributeCollection->getFirstItem()->getEntityAttributeId();
     }
     
-    public function updateSequenceOfAttribute($attributeGroupId, $attribute_id, $attribute_sort_order, $attribute_code = '')
+    public function updateSequenceOfAttribute($attributeGroupId, $attribute_id, $attribute_sort_order, $attribute_code = '', $attribute_group_id)
     {
         $eaventityattribute           = Mage::getModel('customimport/eaventityattribute');
         $eaventityattributeCollection = $eaventityattribute->getCollection()->addFieldToFilter('attribute_group_id', array(
@@ -111,7 +111,7 @@ class Gec_Customimport_Model_Customimport extends Mage_Core_Model_Abstract
             $eaventityattribute->load($id)->addData($data);
             try {
                 $eaventityattribute->setEntityAttributeId($id)->save();
-                $this->customHelper->reportSuccess($this->customHelper->__('Attribute %s is updated successfully in %s attribute group', $attribute_code, $attributeGroupId));
+                $this->customHelper->reportSuccess($this->customHelper->__('Attribute %s is updated successfully in %s attribute group', $attribute_code, $attribute_group_id));
             }
             catch (Exception $e) {
                 $this->customHelper->reportError($e->getMessage());

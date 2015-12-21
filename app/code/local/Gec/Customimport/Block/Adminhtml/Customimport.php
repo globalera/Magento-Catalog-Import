@@ -342,7 +342,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             $attribute_id     = $setup->getAttributeId('catalog_product', $attribute_code);
             $attribute_exists = $mapobj->isAttributeExistsInGroup($attribute_id, $attributeGroupId);
             if ($attribute_exists) {
-                $mapobj->updateSequenceOfAttribute($attributeGroupId, $attribute_id, $attribute_sort_order, $attribute_code);
+                $mapobj->updateSequenceOfAttribute($attributeGroupId, $attribute_id, $attribute_sort_order, $attribute_code, $attribute_group_id);
             } else {
                 $setup->addAttributeToGroup('catalog_product', $attributeSetId, $attributeGroupId, $attribute_id, $attribute_sort_order);
             }
