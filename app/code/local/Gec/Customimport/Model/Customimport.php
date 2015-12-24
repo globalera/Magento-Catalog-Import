@@ -60,13 +60,15 @@ class Gec_Customimport_Model_Customimport extends Mage_Core_Model_Abstract
     /*to check if attribute group exists in attribute set*/
     public function getAttributeGroupByExternalId($externalId, $attributeSetId)
     {
-        $attrgroupCollection = Mage::getModel('customimport/attrgroup')->getCollection()
+        $attrGroupCollection = Mage::getModel('customimport/attrgroup')->getCollection()
                                     ->addFieldToFilter('external_id', array('eq' => $externalId))
-                                    ->addFieldToFilter('attribute_set_id', array('eq' => $attributeSetId));
-        return $attrgroupCollection->getFirstItem()->getMagentoId();
+                                    ->addFieldToFilter('attribute_set_id', 
+                                    		array('eq' => $attributeSetId));
+        return $attrGroupCollection->getFirstItem()->getMagentoId();
     }
     
-    /*to insert a row to define relation between external id ,magento id of group along with setid*/
+    /*to insert a row to define relation between external id ,
+     * magento id of group along with setid*/
     public function mapAttributeGroup($externalId, $magentoId, $attributeSetId)
     {
         $attrgroup = Mage::getModel('customimport/attrgroup');
@@ -94,7 +96,8 @@ class Gec_Customimport_Model_Customimport extends Mage_Core_Model_Abstract
         return $eaventityattributeCollection->getFirstItem()->getEntityAttributeId();
     }
     
-    public function updateSequenceOfAttribute($attributeGroupId, $attribute_id, $attribute_sort_order, $attribute_code = '')
+    public function updateSequenceOfAttribute($attributeGroupId, $attribute_id, 
+    		$attribute_sort_order, $attribute_code = '')
     {
         $eaventityattribute           = Mage::getModel('customimport/eaventityattribute');
         $eaventityattributeCollection = $eaventityattribute->getCollection()->addFieldToFilter('attribute_group_id', array(
@@ -111,7 +114,9 @@ class Gec_Customimport_Model_Customimport extends Mage_Core_Model_Abstract
             $eaventityattribute->load($id)->addData($data);
             try {
                 $eaventityattribute->setEntityAttributeId($id)->save();
-                $this->customHelper->reportSuccess($this->customHelper->__('Attribute %s is updated successfully in %s attribute group', $attribute_code, $attributeGroupId));
+                $this->customHelper->reportSuccess(
+                		$this->customHelper->__('Attribute %s is updated successfully in %s attribute group', 
+                				$attribute_code, $attributeGroupId));
             }
             catch (Exception $e) {
                 $this->customHelper->reportError($e->getMessage());

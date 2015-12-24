@@ -28,16 +28,25 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
         parent::__construct();
         $this->customHelper = Mage::helper('customimport');
         $this->logPath      = Mage::getBaseDir('log') . '/customimport.log';
+        $this->_store_id    = Mage::app()->getWebsite()->getDefaultGroup()->getDefaultStoreId();
+        $this->_default_category_id = Mage::app()->getStore('default')->getRootCategoryId();
+        $this->_xmlObj = null;
+        
+        $this->_created_num = 0;
+        $this->_updated_num = 0;
     }
     
     public function parseXml($xmlPath)
     {
-        $this->_store_id            = Mage::app()->getWebsite()->getDefaultGroup()->getDefaultStoreId();
-        $this->_default_category_id = Mage::app()->getStore('default')->getRootCategoryId();
-        $xmlObj                     = new Varien_Simplexml_Config($xmlPath);
-        $this->_xmlObj              = $xmlObj;
+        $this->_xmlObj = new Varien_Simplexml_Config($xmlPath);
+        $this->customHelper->reportInfo($this->customHelper->__('Loaded File %s to import catalog', 
+        		$xmlPath));
     }
-    
+    protected function  resetCounters()
+    {
+    	$this->_created_num = 0;
+        $this->_updated_num = 0;
+    }
     public function reindexDB($val)
     {
         $process = Mage::getModel('index/process')->load($val);
@@ -81,8 +90,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     
     public function importAllCategory($categories)
     {
-        $this->_created_num = 0;
-        $this->_updated_num = 0;
+        $this->resetCounters();
         foreach ($categories as $category) {
             $this->customHelper->reportInfo($this->customHelper->__('Start process for category # %s', $category->id));
             $this->importCategory($category);
@@ -90,8 +98,8 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
         }
         $this->customHelper->reportSuccess($this->customHelper->__('categories was successfully created %s', $this->_created_num));
         $this->customHelper->reportSuccess($this->customHelper->__('categories was successfully updated %s', $this->_updated_num));
-        $this->_created_num = 0;
-        $this->_updated_num = 0;
+        
+        $this->resetCounters();
     }
     
     public function parseAttribute()
@@ -122,228 +130,261 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
         }
     }
     
+    public function parseAttributegrp()
+    {
+    	$xmlObj  = $this->_xmlObj;
+    	$xmlData = $xmlObj->getNode();
+    	if ($xmlData->attributeConfiguration->attributeGroups->attributeGroup instanceof Varien_Simplexml_Element) {
+    		return $xmlData->attributeConfiguration->attributeGroups->attributeGroup;
+    	}
+    }
+    
+    public function createAttributeSet($attribute_set_name, $external_id)
+    {
+    	$helper         = Mage::helper('adminhtml');
+    	$mapobj         = Mage::getModel('customimport/customimport');
+    	$attributeSetId = $mapobj->getAttributeSetIdByExternalId($external_id);
+    	$entityTypeId = $this->getEntityTypeId();
+    	$modelSet     = Mage::getModel('eav/entity_attribute_set')->setEntityTypeId($entityTypeId);
+    
+    	if (!empty($attributeSetId)) {
+    		$modelSet->load($attributeSetId);
+    		if (!$modelSet->getId()) {
+    			$this->customHelper->reportError(
+    					$this->customHelper->__('The attribute set %s (%s) no longer exists'),
+    					$external_id, $attribute_set_name);
+    			Mage::throwException($this->customHelper->__('This attribute set no longer exists.'));
+    		}
+    		$modelSet->setAttributeSetName(trim($attribute_set_name));
+    		$modelSet->validate();
+    		$modelSet->save();
+    		$this->customHelper->reportError(
+    				$this->customHelper->__('The attribute set %s (%s) created successfully.'),
+    				$external_id, $attribute_set_name);
+    		return $attributeSetId;
+    	}
+    
+    	$modelSet->setAttributeSetName($attribute_set_name);    // to add attribute set
+    	$defaultAttributeSetId = $this->getAttributeSetId('Default');
+    	try {
+    		if ($modelSet->validate()) {
+    			$attributeSetId = $modelSet->save()->getAttributeSetId();
+    			$modelSet->initFromSkeleton($defaultAttributeSetId)->save();
+    		}
+    	}
+    	catch (Exception $e) {
+    		$this->customHelper->reportError(
+    				$this->customHelper->__('Attribute set name %s, id %s already exists in Magento',
+    						$attribute_set_name, $external_id));
+    	}
+    	$mapobj->mapAttributeSet($external_id, $attributeSetId);
+    	return $attributeSetId;
+    }
+    public function removeAttributeFromGroup($attribute_group_id, $attributeSetId, $attribute_code)
+    {
+    	$mapobj           = Mage::getModel('customimport/customimport');
+    	$attributeGroupId = $mapobj->getAttributeGroupByExternalId($attribute_group_id, $attributeSetId); // $attribute_group_id is external group id
+    
+    	if ($attributeGroupId) {
+    		$setup        = new Mage_Eav_Model_Entity_Setup('core_setup');
+    		$attribute_id = $setup->getAttributeId('catalog_product', $attribute_code);
+    		$attribute_exists = $mapobj->isAttributeExistsInGroup($attribute_id, $attributeGroupId);
+    		if ($attribute_exists) {
+    			$installer = $this->getInstaller();
+    			$installer->startSetup();
+    			$installer->deleteTableRow('eav/entity_attribute', 'attribute_id', $attribute_id, 'attribute_set_id', $attributeSetId);
+    			$installer->endSetup();
+    		}
+    	}
+    }
+    
+    public function createAttributeGroup($attribute_group_name, $attribute_group_id, $attributeSetId)
+    {
+    	$model            = Mage::getModel('eav/entity_attribute_group');
+    	$mapobj           = Mage::getModel('customimport/customimport');
+    	$attributeGroupId = $mapobj->getAttributeGroupByExternalId($attribute_group_id, $attributeSetId);
+    	$group_id_exist = !empty($attributeGroupId);
+    	if ($group_id_exist) {
+    		$model->load($attributeGroupId);
+    		$old_group_name = $model->getAttributeGroupName();
+    		if (strcmp($old_group_name, $attribute_group_name) !== 0) { // if name has been updated
+    			$model->setAttributeGroupName($attribute_group_name);
+    			if (!$model->itemExists()) {
+    				$model->save();
+    			}
+    		}
+    	} else {
+    		$model->setAttributeGroupName($attribute_group_name)->setAttributeSetId($attributeSetId);
+    	}
+    	if (!$model->itemExists()) {
+    		try {
+    			$model->save();
+    		}
+    		catch (Exception $e) {
+    			$this->customHelper->reportError(
+    					$this->customHelper->__("An error occurred while saving the group %s (%s).",
+    							$attribute_group_id, $attribute_group_name));
+    			return false;
+    		}
+    	}
+    	if(!$group_id_exist) {
+    		$attributeGroupId = $mapobj->getGroupIdUsingSetId($attribute_group_name, $attributeSetId);
+    		$mapobj->mapAttributeGroup($attribute_group_id, $attributeGroupId, $attributeSetId); // externalid, magentoid
+    	}
+    	return true;
+    }
+    
+    
+    
+    public function removeAttributeGroup($attribute_group_name, $attribute_group_id, $attributeSetId)
+    {
+    	$setup            = new Mage_Eav_Model_Entity_Setup('core_setup');
+    	$mapobj           = Mage::getModel('customimport/customimport');
+    	$attributeGroupId = $mapobj->getAttributeGroupByExternalId($attribute_group_id, $attributeSetId);
+    	if ($attributeGroupId) {
+    		$setup->removeAttributeGroup('catalog_product', $attributeSetId, $attributeGroupId);
+    	} else {
+    		$this->customHelper->reportInfo($this->customHelper->__("Attribute Group is not available to be removed."));
+    	}
+    }
+    
     public function importAttributeSet($parsedAttributeSet)
     {
-        $attributeSet_groups           = array();
-        $attributeSet_groups['status'] = array();
-        $attributeSet_groups['id']     = array();
-        $attributegroup_id     = array();
-        $attributegroup_status = array();
-        
+        $attributeSetsPerGroup = array();
+        $this->customHelper->reportInfo(
+            		$this->customHelper->__("*********** Starting importAttributeSet (%d) ***********"),
+        			count($parsedAttributeSet));
         foreach ($parsedAttributeSet as $set) {
-            $this->customHelper->reportInfo($this->customHelper->__('Start process for attribute set # %s', $set->id));
+            $this->customHelper->reportInfo(
+            		$this->customHelper->__('Start process for attribute set # Id: %s, name: %s', 
+            		$set->id, $set->name));
             $attributeSetId   = (string) $set->id;
             $attributeSetName = (string) $set->name;
             
             if ($attributeSetName == '') {
                 $attributeSetName = $attributeSetId;
             }
-            $attributeGrp     = $set->attributeGroups->attributeGroup;
             $attribute_set_id = $this->createAttributeSet($attributeSetName, $attributeSetId);
-            
-            foreach ($attributeGrp as $attrgroup) {
-                $attributegroup_id                                   = (string) $attrgroup->id;
-                $attributegroup_status                               = (string) $attrgroup->isActive;
-                $attributeSet_groups['id'][$attributegroup_id][]     = $attribute_set_id;
-                $attributeSet_groups['status'][$attributegroup_id][] = $attributegroup_status;
+            if (empty($attribute_set_id)) {
+            	$this->customHelper->reportError(
+            			$this->customHelper->__('The attribute set id returned empty by createAttributeSet for %s (%s).'),
+            			$attributeSetId, $attributeSetName);
             }
-            unset($attributegroup_status);
-            unset($attributegroup_id);
-            $this->customHelper->reportInfo($this->customHelper->__('End process for attribute set # %s', $set->id));
+            else  {
+            	$attributeGroups = $set->attributeGroups->attributeGroup;
+            	foreach ($attributeGroups as $attributeGroup) {
+            		$attribute_set_status = $this->customHelper->getXmlNodeValue($attributeGroup->isActive, "Y", true);
+            		$attributeSetsPerGroup[$attributegroup_id][] = array("id" => $attribute_set_id,
+            				"status" => $attribute_set_status);
+            	}	
+            }
+            
+
+            $this->customHelper->reportInfo(
+            		$this->customHelper->__('End process for attribute set # Id: %s, name: %s', 
+            		$set->id, $set->name));
         }
         $this->attributeGroupsGlobal = $attributeSet_groups;
+        
+        $this->customHelper->reportInfo("*********** Exiting importAttributeSet ***********");
     }
-        
-    public function createAttributeSet($attribute_set_name, $external_id)
+
+    public function importAttributeGrp($attributeGroups)
     {
-        $helper         = Mage::helper('adminhtml');
-        $mapobj         = Mage::getModel('customimport/customimport');
-        $attributeSetId = $mapobj->getAttributeSetIdByExternalId($external_id);
-        $entityTypeId = $this->getEntityTypeId();
-        $modelSet     = Mage::getModel('eav/entity_attribute_set')->setEntityTypeId($entityTypeId);
-        
-        if (isset($attributeSetId) && !empty($attributeSetId)) {
-            $modelSet->load($attributeSetId);
-            if (!$modelSet->getId()) {
-                $this->customHelper->reportError($this->customHelper->__('This attribute set no longer exists'));
-                Mage::throwException($this->customHelper->__('This attribute set no longer exists.'));
-            }
-            $modelSet->setAttributeSetName(trim($attribute_set_name));
-            $modelSet->validate();
-            $modelSet->save();
-            return $attributeSetId;
+    	$this->customHelper->reportInfo(
+    			$this->customHelper->__("*********** Starting import Attribute Group (%d) ***********"),
+    			count($attributeGroups));
+        $attributeSetsPerGroup = $this->attributeGroupsGlobal;
+        foreach ($attributeGroups as $attributeGroup) {
+        	$groupId   = (string) $attribute->id;
+        	$groupName = (string) $attribute->name;
+        	if ($groupName == '') {
+        		$groupName = $groupId;
+        	}
+        	
+        	foreach ($this->attributeGroupsGlobal[$groupId] as $attribut_set) {
+        		if ($attribut_set['status'] == 'Y') {
+        			//create group here
+        			if(!$this->createAttributeGroup($groupName, $groupId, $attribut_set['id'])) {
+        				continue;
+        			}
+        			// loop for all attributes
+        			foreach ($attributeGroup->groupedAttributes->attribute as $groupedAttribute) {
+        				if ($this->customHelper->getXmlNodeValue($groupedAttribute->isActive,"Y", true) == 'Y') {
+        					// insert attributes inside group
+        					$attribute_sort_order = $this->customHelper->getXmlNodeValue($groupedAttribute->position, 0);
+        					$this->importAttributeInsideGroup($groupId, 
+        									$attribut_set['id'], (string)$groupedAttribute->id, 
+        									$attribute_sort_order);
+        				} else {
+        					$this->removeAttributeFromGroup($groupId, $attribut_set['id'], 
+        							(string)$groupedAttribute->id);
+        				}
+        			}
+        		} else {
+        			// remove group from this set
+        			$this->removeAttributeGroup($groupName, $groupId, $attribut_set['id']);
+        	
+        		}
+        	}
         }
-        
-        $modelSet->setAttributeSetName($attribute_set_name);    // to add attribute set
-        $defaultAttributeSetId = $this->getAttributeSetId('Default');
-        try {
-            if ($modelSet->validate()) {
-                $attributeSetId = $modelSet->save()->getAttributeSetId();
-                $modelSet->initFromSkeleton($defaultAttributeSetId)->save();
-            }
-        }
-        catch (Exception $e) {
-            $this->customHelper->reportError($this->customHelper->__('Attribute set name %s with id %s already exists in Magento system with same name', $attribute_set_name, $external_id));
-        }
-        $mapobj->mapAttributeSet($external_id, $attributeSetId);
-        return $attributeSetId;
-    }
-        
-    public function parseAttributegrp()
-    {
-        $xmlObj  = $this->_xmlObj;
-        $xmlData = $xmlObj->getNode();
-        if ($xmlData->attributeConfiguration->attributeGroups->attributeGroup instanceof Varien_Simplexml_Element) {
-            return $xmlData->attributeConfiguration->attributeGroups->attributeGroup;
-        }
+        $this->customHelper->reportInfo("*********** Exiting import Attribute Group ***********");
     }
     
-    public function importAttributeGrp($parsedAttribute)
+    public function importAttributeInsideGroup($attribute_group_id, $attributeSetId, 
+    											$attribute_code, $attribute_sort_order)
     {
-        $setOfGroups = $this->attributeGroupsGlobal;
-        foreach ($parsedAttribute as $attribute) {
-            $attributeSets             = array();
-            $attributesOfGroup         = array(); // array to store attribute detail info of attribute group
-            $attributesIdOfGroup       = array();
-            $attributesStatusOfGroup   = array();
-            $attributesSequenceOfGroup = array();
-            $groupAttributes = $attribute->groupedAttributes->attribute;
-            foreach ($groupAttributes as $grp) {
-                $attributesIdOfGroup[]       = (string) $grp->id;
-                $attributesStatusOfGroup[]   = (string) $grp->isActive ? (string) $grp->isActive : 'Y';
-                $attributesSequenceOfGroup[] = (string) $grp->position ? (string) $grp->position : 0;
-            }
-            
-            $attributesOfGroup['attr_ids']      = $attributesIdOfGroup;
-            $attributesOfGroup['attr_status']   = $attributesStatusOfGroup;
-            $attributesOfGroup['attr_sequence'] = $attributesSequenceOfGroup;
-            $groupId   = (string) $attribute->id;
-            $groupName = (string) $attribute->name;
-            
-            if ($groupName == '') {
-                $groupName = $groupId;
-            }
-            
-            $attributeSets['set_ids']    = $setOfGroups['id'][$groupId];
-            $attributeSets['set_status'] = $setOfGroups['status'][$groupId];
-            $this->manageAttributeGroup($groupName, $groupId, $attributeSets, $attributesOfGroup);
-            unset($attributeSets);
-            unset($attributesOfGroup);
-            unset($attributesIdOfGroup);
-            unset($attributesStatusOfGroup);
-            unset($attributesSequenceOfGroup);
-        }
+    	$mapobj           = Mage::getModel('customimport/customimport');
+    	$attributeGroupId = $mapobj->getAttributeGroupByExternalId($attribute_group_id, $attributeSetId); // $attribute_group_id is external group id
+    
+    	if ($attributeGroupId) {
+    		$setup            = new Mage_Eav_Model_Entity_Setup('core_setup');
+    		$attribute_id     = $setup->getAttributeId('catalog_product', $attribute_code);
+    		$attribute_exists = $mapobj->isAttributeExistsInGroup($attribute_id, $attributeGroupId);
+    		if ($attribute_exists) {
+    			$mapobj->updateSequenceOfAttribute($attributeGroupId, $attribute_id, $attribute_sort_order, $attribute_code);
+    		} else {
+    			$setup->addAttributeToGroup('catalog_product', $attributeSetId, $attributeGroupId, $attribute_id, $attribute_sort_order);
+    		}
+    	}
     }
     
     /**
     * setname and group are arrays
     * @param $attribute_group_id is external group id
     */
-    public function manageAttributeGroup($attribute_group_name, $attribute_group_id, $attribute_set_ids, $attributesOfGroup)
-    {
-        // loop for attribute sets
-        foreach ($attribute_set_ids['set_ids'] as $k => $set_id) {
-            if ($attribute_set_ids['set_status'][$k] == 'Y') {
-                //create group here
-                $res = $this->createAttributeGroup($attribute_group_name, $attribute_group_id, $set_id);
-                // loop for all attributes
-                foreach ($attributesOfGroup['attr_ids'] as $k => $attribute_code) {
-                    if ($attributesOfGroup['attr_status'][$k] == 'Y') {
-                        // insert attributes inside group
-                        $attributeSortOrder = 0;
-                        if (isset($attributesOfGroup['attr_sequence'])) {
-                            $attributeSortOrder = $attributesOfGroup['attr_sequence'][$k];
-                        }
-                        $this->importAttributeInsideGroup($attribute_group_id, $set_id, $attribute_code, $attributeSortOrder);
+//     public function manageAttributeGroup($attribute_group_name, $attribute_group_id, $attribute_set_ids, $attributesOfGroup)
+//     {
+//         // loop for attribute sets
+//         foreach ($attribute_set_ids['set_ids'] as $k => $set_id) {
+//             if ($attribute_set_ids['set_status'][$k] == 'Y') {
+//                 //create group here
+//                 $res = $this->createAttributeGroup($attribute_group_name, $attribute_group_id, $set_id);
+//                 // loop for all attributes
+//                 foreach ($attributesOfGroup['attr_ids'] as $k => $attribute_code) {
+//                     if ($attributesOfGroup['attr_status'][$k] == 'Y') {
+//                         // insert attributes inside group
+//                         $attributeSortOrder = 0;
+//                         if (isset($attributesOfGroup['attr_sequence'])) {
+//                             $attributeSortOrder = $attributesOfGroup['attr_sequence'][$k];
+//                         }
+//                         $this->importAttributeInsideGroup($attribute_group_id, $set_id, $attribute_code, $attributeSortOrder);
                         
-                    } else {
-                        $this->removeAttributeFromGroup($attribute_group_id, $set_id, $attribute_code);
-                    }
-                }
-            } else {
-                // remove group from this set
-                $this->removeAttributeGroup($attribute_group_name, $attribute_group_id, $set_id);
+//                     } else {
+//                         $this->removeAttributeFromGroup($attribute_group_id, $set_id, $attribute_code);
+//                     }
+//                 }
+//             } else {
+//                 // remove group from this set
+//                 $this->removeAttributeGroup($attribute_group_name, $attribute_group_id, $set_id);
                 
-            }
-        }
-    }
+//             }
+//         }
+//     }
     
-    public function createAttributeGroup($attribute_group_name, $attribute_group_id, $attributeSetId)
-    {
-        $model            = Mage::getModel('eav/entity_attribute_group');
-        $mapobj           = Mage::getModel('customimport/customimport');
-        $attributeGroupId = $mapobj->getAttributeGroupByExternalId($attribute_group_id, $attributeSetId);
-        if (isset($attributeGroupId) && !empty($attributeGroupId)) {
-            $model->load($attributeGroupId);
-            $oldGroupName = $model->getAttributeGroupName();
-            if ($oldGroupName != $attribute_group_name) { // if name has been updated
-                $model->setAttributeGroupName($attribute_group_name);
-                if (!$model->itemExists()) {
-                    $model->save();
-                }
-            }
-        } else {
-            $model->setAttributeGroupName($attribute_group_name)->setAttributeSetId($attributeSetId);
-            if ($model->itemExists()) {
-            } else {
-                try {
-                    $model->save();
-                }
-                catch (Exception $e) {
-                    $this->customHelper->reportError($this->customHelper->__("An error occurred while saving this group."));
-                }
-            }
-            $attributeGroupId = $mapobj->getGroupIdUsingSetId($attribute_group_name, $attributeSetId);
-            $mapobj->mapAttributeGroup($attribute_group_id, $attributeGroupId, $attributeSetId); // externalid, magentoid
-        }
-    }
     
-    public function removeAttributeFromGroup($attribute_group_id, $attributeSetId, $attribute_code)
-    {
-        $mapobj           = Mage::getModel('customimport/customimport');
-        $attributeGroupId = $mapobj->getAttributeGroupByExternalId($attribute_group_id, $attributeSetId); // $attribute_group_id is external group id
         
-        if ($attributeGroupId) {
-            $setup        = new Mage_Eav_Model_Entity_Setup('core_setup');
-            $attribute_id = $setup->getAttributeId('catalog_product', $attribute_code);
-            $attribute_exists = $mapobj->isAttributeExistsInGroup($attribute_id, $attributeGroupId);
-            if ($attribute_exists) {
-                $installer = $this->getInstaller();
-                $installer->startSetup();
-                $installer->deleteTableRow('eav/entity_attribute', 'attribute_id', $attribute_id, 'attribute_set_id', $attributeSetId);
-                $installer->endSetup();
-            }
-        }
-    }
     
-    public function removeAttributeGroup($attribute_group_name, $attribute_group_id, $attributeSetId)
-    {
-        $setup            = new Mage_Eav_Model_Entity_Setup('core_setup');
-        $mapobj           = Mage::getModel('customimport/customimport');
-        $attributeGroupId = $mapobj->getAttributeGroupByExternalId($attribute_group_id, $attributeSetId);
-        if ($attributeGroupId) {
-            $setup->removeAttributeGroup('catalog_product', $attributeSetId, $attributeGroupId);
-        } else {
-            $this->customHelper->reportInfo($this->customHelper->__("Attribute Group is not available to be removed."));
-        }
-    }
-        
-    public function importAttributeInsideGroup($attribute_group_id, $attributeSetId, $attribute_code, $attribute_sort_order)
-    {
-        $mapobj           = Mage::getModel('customimport/customimport');
-        $attributeGroupId = $mapobj->getAttributeGroupByExternalId($attribute_group_id, $attributeSetId); // $attribute_group_id is external group id
-        
-        if ($attributeGroupId) {
-            $setup            = new Mage_Eav_Model_Entity_Setup('core_setup');
-            $attribute_id     = $setup->getAttributeId('catalog_product', $attribute_code);
-            $attribute_exists = $mapobj->isAttributeExistsInGroup($attribute_id, $attributeGroupId);
-            if ($attribute_exists) {
-                $mapobj->updateSequenceOfAttribute($attributeGroupId, $attribute_id, $attribute_sort_order, $attribute_code);
-            } else {
-                $setup->addAttributeToGroup('catalog_product', $attributeSetId, $attributeGroupId, $attribute_id, $attribute_sort_order);
-            }
-        }
-    }
     
     public function getAttributeGroupId($attribute_group_name, $attribute_set_name)
     {
