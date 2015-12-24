@@ -169,11 +169,12 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 Mage::throwException($this->customHelper->__('This attribute set no longer exists.'));
             }
             $modelSet->setAttributeSetName(trim($attribute_set_name));
-            try {
+            try{
                 $modelSet->validate();
                 $modelSet->save();
-            } catch (Exception $e) {
-                $this->customHelper->reportError($this->customHelper->__('Attribute set name %s with id %s already exists in magento system with the same name', $attribute_set_name, $external_id));
+            }
+            catch(Exception $e) {
+                $this->customHelper->reportError($this->customHelper->__('Attribute set name %s with id %s already exists in Magento system with same name', $attribute_set_name, $external_id));
             }
             return $attributeSetId;
         }
@@ -340,16 +341,17 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
         if ($attributeGroupId) {
             $setup            = new Mage_Eav_Model_Entity_Setup('core_setup');
             $attribute_id     = $setup->getAttributeId('catalog_product', $attribute_code);
-            if (!$attribute_id) {
-                $this->customHelper->reportError($this->customHelper->__("Attribute Code %s is missing during attribute group %s import."),$attribute_code, $attribute_group_id);
+	    if (!$attribute_id) {
+                $this->customHelper->reportError($this->customHelper->__("Attribute code %s is missing during attribute group %s import",$attribute_code, $attribute_group_id));
             } else {
-                $attribute_exists = $mapobj->isAttributeExistsInGroup($attribute_id, $attributeGroupId);
-                if ($attribute_exists) {
-                    $mapobj->updateSequenceOfAttribute($attributeGroupId, $attribute_id, $attribute_sort_order, $attribute_code, $attribute_group_id);
-                } else {
-                    $setup->addAttributeToGroup('catalog_product', $attributeSetId, $attributeGroupId, $attribute_id, $attribute_sort_order);
-                }
-            }
+
+	            $attribute_exists = $mapobj->isAttributeExistsInGroup($attribute_id, $attributeGroupId);
+        	    if ($attribute_exists) {
+                	$mapobj->updateSequenceOfAttribute($attributeGroupId, $attribute_id, $attribute_sort_order, $attribute_code, $attribute_group_id);
+	            } else {
+        	        $setup->addAttributeToGroup('catalog_product', $attributeSetId, $attributeGroupId, $attribute_id, $attribute_sort_order);
+            	    }
+	    }
         }
     }
     
@@ -510,36 +512,36 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                                 $preCrossArray[$prid] = array(
                                     'position' => $position
                                 );
-                            } else if ((string) $association->assocType == 1) {
+                            } elseif ((string) $association->assocType == 1) {
                                 $preUpsellArray[$prid] = array(
                                     'position' => $position
                                 );
-                            } else if ((string) $association->assocType == 2) {
+                            } elseif ((string) $association->assocType == 2) {
                                 $preRelatedArray[$prid] = array(
                                     'position' => $position
                                 );
-                            } else if ((string) $association->assocType == 3) {
+                            } elseif ((string) $association->assocType == 3) {
                                 $preAssociatedArray[] = $prid;
                                 $this->_changeVisibility($prid);
-                            } else if ((string) $association->assocType == 4) {
+                            } elseif ((string) $association->assocType == 4) {
                                 $bundleArray[]         = $prid;
                                 $bundleQuantityArray[] = (int) $association->quantity;
                                 $bundlePositionArray[] = (int) $position;
                             }
-                        } else if($prid && strtolower((string) $association->isActive) == 'n') {
+                        } elseif($prid && strtolower((string) $association->isActive) == 'n') {
                            if ((string) $association->assocType == 0) {
                                 $crossArray[$prid] = array(
                                     'position' => $position
                                 );
-                            } else if ((string) $association->assocType == 1) {
+                            } elseif ((string) $association->assocType == 1) {
                                  $upsellArray[$prid] = array(
                                     'position' => $position
                                 );
-                            } else if ((string) $association->assocType == 2) {
+                            } elseif ((string) $association->assocType == 2) {
                                  $relatedArray[$prid] = array(
                                     'position' => $position
                                 );
-                            } else if ((string) $association->assocType == 3) {
+                            } elseif ((string) $association->assocType == 3) {
                                  $disAssociateArray[] = $prid;
                             }
                         }
@@ -808,7 +810,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                     $isActive = ((string) $subcat->isActive == 'Y') ? 1 : 0;
                     $category->setData('is_active', $isActive);
                     $category->save();
-                } else if ($category_id = $mapObj->isCategoryExists($ext_subid)) {
+                } elseif ($category_id = $mapObj->isCategoryExists($ext_subid)) {
                     $isActive = ((string) $subcat->isActive);
                     $status   = $this->getTreeCategories($category_id, $p_id, $isActive, false);
                 } else {
@@ -845,14 +847,14 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             $asid = $itemids["asid"];
             if (!isset($pid)) {
                 if (!isset($asid)) {
-                    $this->customHelper->reportError($this->customHelper->__('cannot create product sku  %s ', $item->id));
+                    $this->customHelper->reportError($this->customHelper->__('Cannot create product sku  %s ', $item->id));
                     return false;
                 }
                 if ((string) $item->type == 'configurable') {
                     $this->createConfigurableProduct($item, $asid); //create con product
-                } else if ((string) $item->type == 'simple') {
+                } elseif ((string) $item->type == 'simple') {
                     $this->createProduct($item, $asid); //create simple product
-                } else if ((string) $item->type == 'bundle') {
+                } elseif ((string) $item->type == 'bundle') {
                     $this->createBundleProduct($item, $asid); //create bundle product
                 } else {
                     $this->customHelper->reportError($this->customHelper->__('Import function does not support product type of record: %s ', $item->id));
@@ -863,18 +865,17 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 try {
                     if ((string) $item->type == 'configurable') {
                         $this->updateConfigurableProduct($item, $pid); //create con product
-                    } else if ((string) $item->type == 'simple') {
+                    } elseif ((string) $item->type == 'simple') {
                         $this->updateProduct($item, $pid); //create simple product
-                    } else if ((string) $item->type == 'bundle') {
+                    } elseif ((string) $item->type == 'bundle') {
                         $this->updateBundleProduct($item, $pid); //create simple product
                     }
-                }
-                catch (Exception $e) {
-                    $this->customHelper->reportError($this->customHelper->__('ERROR: Product can not created for %s', $item->id));
+                } catch (Exception $e) {
+                    $this->customHelper->reportError($this->customHelper->__('Product update failed for # %s', $item->id));
                 }
             }
         } else {
-            $this->customHelper->reportInfo($this->customHelper->__('ERROR: Product %s is skipped due to some error. ', $item->id));
+            $this->customHelper->reportInfo($this->customHelper->__('Product import skipped due to some error for # %s ', $item->id));
         }
     }
     
@@ -913,6 +914,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                     $product->setSpecialToDate("");
             }
             
+            $product->setWeight((real) $item->weight);
             $product->setStatus($p_status);
             $product->setTaxClassId($p_taxclass);    
             $product->setDescription((string) $item->longDescription);
@@ -944,21 +946,31 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             }
 
             foreach ($config_attribute_array as $attr) {
-                $external_id = $configAttributeValue[$attr][0]; // valueDefId from XML for an attribute
                 $model       = Mage::getModel('catalog/resource_eav_attribute');
                 $loadedattr  = $model->loadByCode('catalog_product', $attr);
                 $attr_id     = $loadedattr->getAttributeId(); // attribute id of magento
                 $attr_type   = $loadedattr->getFrontendInput();
-                if ($attr_type == 'select' || $attr_type == 'multiselect' || $attr_type == 'boolean') {
+                if ($attr_type == 'select' || $attr_type == 'multiselect') {
+                    $external_id = $configAttributeValue[$attr][0]; // valueDefId from XML for an attribute
                     $mapObj    = Mage::getModel('customimport/customimport');
                     $option_id = $mapObj->isOptionExistsInAttribute($external_id, $attr_id);
                     if ($option_id) {
                         $product->setData($attr, $option_id);
-                    }
-                } else if ($attr_type == 'text' || $attr_type == 'textarea')
-                {
+                    } else {
+		        $this->customHelper->reportError($this->customHelper->__('Attribute %s has an undefined option value %s. Hence skipping product # %s', $attr, $external_id, $item->id));
+                        return;
+		    }
+                } elseif ($attr_type == 'text' || $attr_type == 'textarea') {
                     $attr_value = $configAttributeValue[$attr][1];
                     $product->setData($attr, $attr_value);
+                } elseif ($attr_type == 'boolean') {
+                    $optVal = Mage::getSingleton('customimport/customimport')->getOptVal($configAttributeValue[$attr][0]);
+                    if (strtolower($optVal->getValue()) == 'y' || strtolower($optVal->getValue()) == 'yes') {
+                        $attOptVal = 1;
+                    } else {
+                        $attOptVal = 0;
+                    }
+                    $product->setData($attr, $attOptVal);
                 }
             }
             
@@ -1025,8 +1037,8 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             $catalogNewproductDays = Mage::getStoreConfig('catalog/newproduct/days', Mage::app()->getStore());
             if (!empty($catalogNewproductDays) && $catalogNewproductDays >= 0) {
                 $currenDateTime = date("Y-m-d H:i:s", Mage::getModel('core/date')->timestamp(time()));
-                $new_from_date = $currenDateTime;
-                $new_to_date   = date($format, strtotime($catalogNewproductDays . ' days' . $new_from_date));
+                $new_from_date = date($format, strtotime('1 days' . $currenDateTime));
+                $new_to_date = date($format, strtotime($catalogNewproductDays . ' days' . $new_from_date));
                 $product->setNewsFromDate($new_from_date);
                 $product->setNewsToDate($new_to_date);
             }
@@ -1062,6 +1074,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 if (!empty($toDate))
                     $product->setSpecialToDate(Mage::helper('customimport')->getCurrentLocaleDateTime($item->specialPrice->toDateTime)); //special price to (MM-DD-YYYY)
             }
+            $product->setWeight((real) $item->weight);
             $product->setStatus($p_status);
             $product->setTaxClassId($p_taxclass);
             $product->setDescription((string) $item->longDescription);
@@ -1110,6 +1123,10 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                         $model                 = Mage::getModel('catalog/resource_eav_attribute');
                         $attr                  = $model->loadByCode('catalog_product', $attribute_code);
                         $attr_id               = $attr->getAttributeId();
+                        if (!$attr_id) {
+                            $this->customHelper->reportError($this->customHelper->__('Attribute %s is not available in magento. Hence skipping product # %s', $attribute_code, $item->id));
+                            return;
+                        }
                         $ProductAttributeIds[] = $attr_id;
                         $attribute_label       = $attr->getFrontendLabel();
                         $attr_detail           = array(
@@ -1127,21 +1144,36 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                     $product->setConfigurableAttributesData($attribute_detail);
                     $product->setCanSaveConfigurableAttributes(1);
                     foreach ($config_attribute_array as $attr) {
-                        $external_id = $configAttributeValue[$attr][0]; // valueDefId from XML for an attribute
                         $model       = Mage::getModel('catalog/resource_eav_attribute');
                         $loadedattr  = $model->loadByCode('catalog_product', $attr);
                         $attr_id     = $loadedattr->getAttributeId(); // attribute id of magento
-                        $attr_type   = $loadedattr->getFrontendInput();
-                        if ($attr_type == 'select' || $attr_type == 'multiselect' || $attr_type == 'boolean') {
-                            $mapObj    = Mage::getModel('customimport/customimport');
-                            $option_id = $mapObj->isOptionExistsInAttribute($external_id, $attr_id);
-                            if ($option_id) {
-                                $product->setData($attr, $option_id);
+                        if (!$attr_id) {
+                            $this->customHelper->reportError($this->customHelper->__('Attribute %s is not available in magento. Hence skipping product # %s', $attr, $item->id));
+                            return;
+                        } else {
+                            $attr_type   = $loadedattr->getFrontendInput();
+                            if ($attr_type == 'select' || $attr_type == 'multiselect') {
+                                $external_id = $configAttributeValue[$attr][0]; // valueDefId from XML for an attribute
+                                $mapObj    = Mage::getModel('customimport/customimport');
+                                $option_id = $mapObj->isOptionExistsInAttribute($external_id, $attr_id);
+                                if ($option_id) {
+                                    $product->setData($attr, $option_id);
+                                } else {
+                                    $this->customHelper->reportError($this->customHelper->__('Attribute %s has an undefined option value %s. Hence skipping product # %s', $attr, $external_id, $item->id));
+                                    return;
+                                }
+                            } elseif ($attr_type == 'text' || $attr_type == 'textarea') {
+                                $attr_value = $configAttributeValue[$attr][1];
+                                $product->setData($attr, $attr_value);
+                            } elseif ($attr_type == 'boolean') {
+                                $optVal = Mage::getSingleton('customimport/customimport')->getOptVal($configAttributeValue[$attr][0]);
+                                if (strtolower($optVal->getValue()) == 'y' || strtolower($optVal->getValue()) == 'yes') {
+                                    $attOptVal = 1;
+                                } else {
+                                    $attOptVal = 0;
+                                }
+                                $product->setData($attr, $attOptVal);
                             }
-                        } else if ($attr_type == 'text' || $attr_type == 'textarea')
-                            {
-			                $attr_value = $configAttributeValue[$attr][1];
-                            $product->setData($attr, $attr_value);
                         }
                     }
                     try {
@@ -1174,20 +1206,18 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                         $stockStatus->assignProduct($product);
                         $stockStatus->saveProductStatus($product->getId(), 1);
                         $this->_created_num++;
-                    }
-                    catch (Exception $e) {
+                    } catch (Exception $e) {
                         $this->customHelper->writeCustomLog('<span style="color:red;">' . $e->getMessage() . '</span>', $this->logPath);
                         $this->customHelper->sendLogEmail($this->logPath);
-                        echo "exception:$e";
                     }
                 } else {
-                    $this->customHelper->reportError($this->customHelper->__('Could not get super attribute for product. Hence skipped product : %s', $item->id));
+                    $this->customHelper->reportError($this->customHelper->__('Could not create super attribute for configurable product from %s. Hence skipped product # %s', array_values($superattribute_array), $item->id));
                 }
             } else {
-                $this->customHelper->reportError($this->customHelper->__('Super attribute is missing. Hence skipped product : %s', $item->id));
+                $this->customHelper->reportError($this->customHelper->__('No super attributes defined for configurable product. Hence skipped product # %s', $item->id));
             }
         } else {
-            $this->customHelper->reportError($this->customHelper->__('Attribute set ID # %s is missing. Hence skipped product SKU # %s', $attid, $item->id));
+            $this->customHelper->reportError($this->customHelper->__('Attribute set ID # %s is missing. Hence skipped product # %s', $asid, $item->id));
         }
     }
     
@@ -1207,8 +1237,8 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             $catalogNewproductDays = Mage::getStoreConfig('catalog/newproduct/days', Mage::app()->getStore());
             if (!empty($catalogNewproductDays) && $catalogNewproductDays >= 0) {
                 $currenDateTime = date("Y-m-d H:i:s", Mage::getModel('core/date')->timestamp(time()));
-                $new_from_date = $currenDateTime;
-                $new_to_date   = date($format, strtotime($catalogNewproductDays . ' days' . $new_from_date));
+                $new_from_date = date($format, strtotime('1 days' . $currenDateTime));
+                $new_to_date = date($format, strtotime($catalogNewproductDays . ' days' . $new_from_date));
                 $product->setNewsFromDate($new_from_date);
                 $product->setNewsToDate($new_to_date);
             }
@@ -1302,14 +1332,12 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                     }
                 }
             }
-            $skipStatus = 0;
             foreach ($multiple_values as $attribute_code => $attribute_values) {
                 $loadedattr = $model->loadByCode('catalog_product', $attribute_code);
                 $attr_id    = $loadedattr->getAttributeId(); // attribute id of magento
                 if (!$attr_id) {
-                    $this->customHelper->reportError($this->customHelper->__('Skipped product %s,attribute is not available in magento database: %s', $item->id, $attribute_code));
-                    $skipStatus = 1;
-                    break;
+                    $this->customHelper->reportError($this->customHelper->__('Attribute %s is not available in magento. Hence skipping product # %s', $attribute_code, $item->id));
+                    return;
                 } else {
                     $attr_type = $loadedattr->getFrontendInput();
                     if ($attr_type == 'select' && count($attribute_values) == 1) {
@@ -1317,31 +1345,32 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                         $option_id = $mapObj->isOptionExistsInAttribute($attribute_values[0], $attr_id);
                         if ($option_id) {
                             $product->setData($attribute_code, $option_id);
+                        }  else {
+                            $this->customHelper->reportError($this->customHelper->__('Attribute %s has an undefined option value %s. Hence skipping product # %s', $attribute_code, $attribute_values[0], $item->id));
+                            return;
                         }
-                    }
-                    if ($attr_type == 'select' && count($attribute_values) > 1) {
+                    } elseif ($attr_type == 'select' && count($attribute_values) > 1) {
                         //multiple values for attribute which is not multiselect
-                        $this->customHelper->reportError($this->customHelper->__('NOTICE: Attribute %s can not have multiple values. Hence skipping product having id %s', $attribute_code, $item->id));
-                        $skipStatus = 1;
-                        break;
-                    }
-                    if ($attr_type == 'multiselect') {
+                        $this->customHelper->reportError($this->customHelper->__('Attribute %s can not have multiple values. Hence skipping product # %s', $attribute_code, $item->id));
+                        return;
+                    } elseif ($attr_type == 'multiselect') {
                         $multivalues = array();
                         foreach ($attribute_values as $value) {
                             $mapObj    = Mage::getModel('customimport/customimport');
                             $option_id = $mapObj->isOptionExistsInAttribute($value, $attr_id);
                             if ($option_id) {
                                 $multivalues[] = $option_id;
+                            } else {
+                                $this->customHelper->reportError($this->customHelper->__('Attribute %s has an undefined option value %s. Hence skipping product id %s', $attribute_code, $value, $item->id));
+                                return;
                             }
                         }
                         $product->addData(array(
                             $attribute_code => $multivalues
                         ));
-                    }
-                    
-                    if ($attr_type == 'text' || $attr_type == 'textarea') {
+                    } elseif ($attr_type == 'text' || $attr_type == 'textarea') {
                         $product->setData($attribute_code, $attribute_values[1]);
-                    } else if ($attr_type == 'boolean') {
+                    } elseif ($attr_type == 'boolean') {
                         $optVal = Mage::getSingleton('customimport/customimport')->getOptVal($attribute_values[0]);
                         if (strtolower($optVal->getValue()) == 'y' || strtolower($optVal->getValue()) == 'yes') {
                             $attOptVal = 1;
@@ -1353,45 +1382,40 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 }
             }
             try {
-                if ($skipStatus == 0) {
-                    Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
-                    $productId = $product->save()->getId();
-                    if ($manageItem == 'N' || $manageItem == 'n') {
-                        $product->setStockData(array(
-                            'use_config_backorders' => 0,
-                            'is_in_stock' => 1,
-                            'manage_stock' => 0
-                        ));
-                        //code for instock while update product
-                        $stockItem = Mage::getModel('cataloginventory/stock_item');
-                        $stockItem->assignProduct($product);
-                        $stockItem->setData('use_config_manage_stock', 0);
-                        $stockItem->setData('manage_stock', 0);
-                        $stockItem->save();
-                        $stockStatus = Mage::getModel('cataloginventory/stock_status');
-                        $stockStatus->assignProduct($product);
-                        $stockStatus->saveProductStatus($product->getId(), 1);
-                    }
-                    if ($productId) {
-                        $this->_created_num++;
-                        unset($product);
-                        unset($multiple_values);
-                        unset($attributeOcuurance);
-                        return $productId;
-                    } else {
-                        $this->customHelper->reportError($this->customHelper->__('NOTICE: Skipped product due to improper attribute values %s', $item->id));
-                    }
-                } else {
-                    $this->customHelper->reportError($this->customHelper->__('NOTICE: Skipped product due to some error while save %s', $item->id));
+                Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
+                $productId = $product->save()->getId();
+                if ($manageItem == 'N' || $manageItem == 'n') {
+                    $product->setStockData(array(
+                        'use_config_backorders' => 0,
+                        'is_in_stock' => 1,
+                        'manage_stock' => 0
+                    ));
+                    //code for instock while update product
+                    $stockItem = Mage::getModel('cataloginventory/stock_item');
+                    $stockItem->assignProduct($product);
+                    $stockItem->setData('use_config_manage_stock', 0);
+                    $stockItem->setData('manage_stock', 0);
+                    $stockItem->save();
+                    $stockStatus = Mage::getModel('cataloginventory/stock_status');
+                    $stockStatus->assignProduct($product);
+                    $stockStatus->saveProductStatus($product->getId(), 1);
                 }
-            }
-            catch (Mage_Eav_Model_Entity_Attribute_Exception $e) {
+                if ($productId) {
+                    $this->_created_num++;
+                    unset($product);
+                    unset($multiple_values);
+                    unset($attributeOcuurance);
+                    return $productId;
+                } else {
+                    $this->customHelper->reportError($this->customHelper->__('Skipped product due to some error while saving # %s', $item->id));
+                }
+            } catch (Mage_Eav_Model_Entity_Attribute_Exception $e) {
                 $this->customHelper->reportError($e->getMessage());
                 $this->customHelper->reportError($e->getAttributeCode());
                 $this->customHelper->sendLogEmail($this->logPath);
             }
         } else {
-            $this->customHelper->reportError($this->customHelper->__('Attribute set ID # %s is missing. Hence skipped product SKU # %s', $attid, $item->id));
+            $this->customHelper->reportError($this->customHelper->__('Attribute set ID # %s is missing. Hence skipped product # %s', $asid, $item->id));
         }
     }
     
@@ -1411,8 +1435,8 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             $catalogNewproductDays = Mage::getStoreConfig('catalog/newproduct/days', Mage::app()->getStore());
             if (!empty($catalogNewproductDays) && $catalogNewproductDays >= 0) {
                 $currenDateTime = date("Y-m-d H:i:s", Mage::getModel('core/date')->timestamp(time()));
-                $new_from_date = $currenDateTime;
-                $new_to_date   = date($format, strtotime($catalogNewproductDays . ' days' . $new_from_date));
+                $new_from_date = date($format, strtotime('1 days' . $currenDateTime));
+                $new_to_date = date($format, strtotime($catalogNewproductDays . ' days' . $new_from_date));
                 $product->setNewsFromDate($new_from_date);
                 $product->setNewsToDate($new_to_date);
             }
@@ -1495,7 +1519,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 $this->customHelper->sendLogEmail($this->logPath);
             }
         } else {
-            $this->customHelper->reportError($this->customHelper->__('Attribute set ID # %s is missing. Hence skipped product SKU # %s', $attid, $item->id));
+            $this->customHelper->reportError($this->customHelper->__('Attribute set ID # %s is missing. Hence skipped product # %s', $asid, $item->id));
         }
     }
     
@@ -1557,23 +1581,20 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 if (array_key_exists((string) $attr->id, $attributeOcuurance)) {
                     $multiple_values[(string) $attr->id][]  = (string) $attr->valueDefId;
                     $attributeOcuurance[(string) $attr->id] = (int) $attributeOcuurance[(string) $attr->id] + 1;
-                    if($attr_type == 'text' || $attr_type == 'textarea'){
-                        $multiple_values[(string) $attr->id][]  = (string) $attr->value;
-                    }
                 } else {
                     $multiple_values[(string) $attr->id][]  = (string) $attr->valueDefId;
                     $attributeOcuurance[(string) $attr->id] = $i;
-                    if($attr_type == 'text' || $attr_type == 'textarea'){
-                        $multiple_values[(string) $attr->id][]  = (string) $attr->value;
-                    }
+                }
+                if($attr_type == 'text' || $attr_type == 'textarea'){
+                    $multiple_values[(string) $attr->id][]  = (string) $attr->value;
                 }
             }
-            $skipStatus = 0;
             foreach ($multiple_values as $attribute_code => $attribute_values) {
                 $loadedattr = $model->loadByCode('catalog_product', $attribute_code);
                 $attr_id    = $loadedattr->getAttributeId(); // attribute id of magento
                 if (!$attr_id) {
-                    $this->customHelper->reportError($this->customHelper->__('Attribute %s is not available in magento database.Hence skipping product having id %s', $attribute_code, $item->id));
+                    $this->customHelper->reportError($this->customHelper->__('Attribute %s is not available in magento. Hence skipping product # %s', $attribute_code, $item->id));
+                    return;
                 } else {
                     $attr_type = $loadedattr->getFrontendInput();
                     if ($attr_type == 'select' && count($attribute_values) == 1) {
@@ -1581,30 +1602,32 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                         $option_id = $mapObj->isOptionExistsInAttribute($attribute_values[0], $attr_id);
                         if ($option_id) {
                             $product->setData($attribute_code, $option_id);
+                        } else {
+                            $this->customHelper->reportError($this->customHelper->__('Attribute %s has an undefined option value %s. Hence skipping product # %s', $attribute_code, $attribute_values[0], $item->id));
+                            return;
                         }
-                    }
-                    if ($attr_type == 'select' && count($attribute_values) > 1) {
+                    } elseif ($attr_type == 'select' && count($attribute_values) > 1) {
                         //multiple values for attribute which is not multiselect
-                        $this->customHelper->reportError($this->customHelper->__('Attribute %s can not have multiple values. Hence skipping product having id %s', $attribute_code, $item->id));
-                        $skipStatus = 1;
-                        break;
-                    }
-                    if ($attr_type == 'multiselect') {
+                        $this->customHelper->reportError($this->customHelper->__('Attribute %s can not have multiple values. Hence skipping product # %s', $attribute_code, $item->id));
+                        return;
+                    } elseif ($attr_type == 'multiselect') {
                         $multivalues = array();
                         foreach ($attribute_values as $value) {
                             $mapObj    = Mage::getModel('customimport/customimport');
                             $option_id = $mapObj->isOptionExistsInAttribute($value, $attr_id);
                             if ($option_id) {
                                 $multivalues[] = $option_id;
+                            } else {
+                                $this->customHelper->reportError($this->customHelper->__('Attribute %s has an undefined option value %s. Hence skipping product # %s', $attribute_code, $value, $item->id));
+                                return;
                             }
                         }
                         $product->addData(array(
                             $attribute_code => $multivalues
                         ));
-                    }
-                    if ($attr_type == 'text' || $attr_type == 'textarea') { // if type is text/textarea
+                    } elseif ($attr_type == 'text' || $attr_type == 'textarea') { // if type is text/textarea
                         $product->setData($attribute_code, $attribute_values[1]);
-                    } else if ($attr_type == 'boolean') {
+                    } elseif ($attr_type == 'boolean') {
                         $optVal = Mage::getSingleton('customimport/customimport')->getOptVal($attribute_values[0]);
                         if (strtolower($optVal->getValue()) == 'y' || strtolower($optVal->getValue()) == 'yes') {
                             $attOptVal = 1;
@@ -1615,39 +1638,35 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                     }
                 }
             }
-            if ($skipStatus == 0) {
-                Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
-                $productId = $product->save()->getId();
-                $this->_updated_num++;
-                $stockItem   = Mage::getModel('cataloginventory/stock_item')->loadByProduct($productId);
-                $stockItemId = $stockItem->getId();
-                $inventory   = $item->inventory;
-                $manageItem  = (string) $inventory->manageStock;
-                $manageItem  = strtoupper($manageItem);
-                if ($manageItem == 'Y') { // if product item exist
-                    $stockItem->setData('manage_stock', 1);
-                    $stockItem->setData('is_in_stock', 1);
-                    $stockItem->setData('qty', $inventory->atp);
-                    if (strtoupper($inventory->allowBackorders) == 'Y') { // if back order allowed
-                        $stockItem->setData('use_config_backorders', 0);
-                        $stockItem->setData('backorders', 1);
-                    }
-                    if (strtoupper($inventory->allowBackorders) == 'N') { // if back order allowed
-                        $stockItem->setData('use_config_backorders', 0);
-                        $stockItem->setData('backorders', 0);
-                    }
-                } else {
-                    $stockItem->setData('use_config_manage_stock', 0);
-                    $stockItem->setData('manage_stock', 0); // manage stock to no
+
+            Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
+            $productId = $product->save()->getId();
+            $this->_updated_num++;
+            $stockItem   = Mage::getModel('cataloginventory/stock_item')->loadByProduct($productId);
+            $stockItemId = $stockItem->getId();
+            $inventory   = $item->inventory;
+            $manageItem  = (string) $inventory->manageStock;
+            $manageItem  = strtoupper($manageItem);
+            if ($manageItem == 'Y') { // if product item exist
+                $stockItem->setData('manage_stock', 1);
+                $stockItem->setData('is_in_stock', 1);
+                $stockItem->setData('qty', $inventory->atp);
+                if (strtoupper($inventory->allowBackorders) == 'Y') { // if back order allowed
+                    $stockItem->setData('use_config_backorders', 0);
+                    $stockItem->setData('backorders', 1);
                 }
-                
-                Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
-                $stockItem->save();
-                unset($product);
-                return $productId;
+                if (strtoupper($inventory->allowBackorders) == 'N') { // if back order allowed
+                    $stockItem->setData('use_config_backorders', 0);
+                    $stockItem->setData('backorders', 0);
+                }
             } else {
-                $this->customHelper->reportError($this->customHelper->__('Skipped product due to improper attribute values : %s', $item->id));
+                $stockItem->setData('use_config_manage_stock', 0);
+                $stockItem->setData('manage_stock', 0); // manage stock to no
             }
+
+            Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
+            $stockItem->save();
+            unset($product);
         } else {
             $this->customHelper->reportError($this->customHelper->__('Skipped product due to some error while save : %s', $item->id));
         }
