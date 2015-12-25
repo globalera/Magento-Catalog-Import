@@ -20,6 +20,11 @@
 
 class Gec_Customimport_Helper_Data extends Mage_Core_Helper_Abstract
 {
+	private $colormap = array(
+			"info" => "blue",
+			"error" => "red",
+			"success" => "#009900"
+	);
 	public function __construct()
 	{
 		parent::__construct();
@@ -86,22 +91,32 @@ class Gec_Customimport_Helper_Data extends Mage_Core_Helper_Abstract
     {
         return date('Y-m-d H:i:s', Mage::getModel('core/date')->timestamp(strtotime($defaultUTCDate))); 
     }
-	
+    private function reportLog($message, $color="black", $display = true)
+    {
+    	$this->writeCustomLog($msg);
+    	if($display)
+    	{
+	    	$message = sprintf('<br/><br/><span style="color:%s;">%s</span>', $color, $message);
+	    	echo $message;
+    	}
+    }
+    public function reportStart($msg){
+    	$msg = sprintf('******************** Starting %s ********************</span>', $msg);
+    	$this->reportLog($msg);
+    }
+    public function reportEnd($msg){
+    	$msg = sprintf('******************** Ending %s ********************</span>', $msg);
+    	$this->reportLog($msg);
+    }
 	public function reportInfo($msg){
-		$msg = '<span style="color:blue;">'.$msg.'</span>';
-		$this->writeCustomLog($msg);
-		echo "<br/><br/>".$msg;
+		$this->reportLog($msg, $this->colormap['info']);
 	}
 	
 	public function reportError($msg){
-		$msg = '<span style="color:red;">'.$msg.'</span>';
-		$this->writeCustomLog($msg);
-		echo "<br/><br/>".$msg;
+		$this->reportLog($msg, $this->colormap['error']);
 	}
 	
 	public function reportSuccess($msg){
-		$msg = '<span style="color:#009900;">'.$msg.'</span>';
-		$this->writeCustomLog($msg);
-		echo "<br/><br/>".$msg;
+		$this->reportLog($msg, $this->colormap['success']);
 	}
 }
