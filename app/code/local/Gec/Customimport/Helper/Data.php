@@ -20,11 +20,28 @@
 
 class Gec_Customimport_Helper_Data extends Mage_Core_Helper_Abstract
 {
+	public function __construct()
+	{
+		parent::__construct();
+		$this->is_verbose = true;
+	}
+	public function verboseLog($msg)
+	{
+		if($this->is_verbose){
+			$this->writeCustomLog($msg);
+		}
+	}
     public function writeCustomLog($msg, $path = null) {
         if($path == null){
             $path = Mage::getBaseDir('log').'/customimport.log';
         }
         error_log("[".date('Y:m:d H:i:s', time())."] : ".print_r($msg, true)."<br/> \r\n", 3, $path);            
+    }
+    public function writeCustomLog($msg, $path = null) {
+    	if($path == null){
+    		$path = Mage::getBaseDir('log').'/customimport.log';
+    	}
+    	error_log("[".date('Y:m:d H:i:s', time())."] : ".print_r($msg, true)."<br/> \r\n", 3, $path);
     }
     
     public function sendLogEmail($logPath = '')
