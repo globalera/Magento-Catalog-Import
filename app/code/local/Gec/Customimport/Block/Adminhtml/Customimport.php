@@ -22,20 +22,21 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
 {
     protected $customHelper;
     protected $logPath;
+    private $_externalIdToCategoryIdMap;
     
     public function __construct()
     {
         parent::__construct();
         $this->customHelper = Mage::helper('customimport');
         $this->logPath      = Mage::getBaseDir('log') . '/customimport.log';
+        $this->_externalIdToCategoryIdMap = array();
     }
     
     public function parseXml($xmlPath)
     {
         $this->_store_id            = Mage::app()->getWebsite()->getDefaultGroup()->getDefaultStoreId();
         $this->_default_category_id = Mage::app()->getStore('default')->getRootCategoryId();
-        $xmlObj                     = new Varien_Simplexml_Config($xmlPath);
-        $this->_xmlObj              = $xmlObj;
+        $this->_xmlObj              = new Varien_Simplexml_Config($xmlPath);
     }
     
     public function reindexDB($val)
@@ -78,20 +79,237 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             return false;
         }
     }
-    
+    private function getXmlNodeValue($node_value, $default_value = "", $to_upper = false)
+    {
+    	$return_value = (empty($node_value) ? $default_value : (string)$node_value);
+    	return ($to_upper ? strtoupper($return_value) : $return_value);
+    }
+    private function resetCounters()
+	{
+		$this->_created_num = 0;
+	    $this->_updated_num = 0;
+	}
+    private function refreshExternalIdToCategoryIdMapping()
+    {
+    	$this->customHelper->verboseLog("Refreshing Exertnal ID to Magento ID map.");
+    	
+    	unset($this->_externalIdToCategoryIdMap);
+    	$this->_externalIdToCategoryIdMap = array();
+    	$catsWithCustomAttr = array();
+    	$collection         = Mage::getModel('catalog/category')->getCollection();
+    	$collection->addAttributeToSelect("external_id");
+    	if(!empty($collection))
+    	{
+	    	foreach ($collection as $category)
+	    	{
+	    		if(!empty($category->getExternalId()))
+	    			$this->_externalIdToCategoryIdMap[$category->getExternalId()][] = $category->getId();
+	    	}
+    	}
+    	$this->customHelper->verboseLog($this->customHelper->__('Refreshed (%d) Exertnal ID to Magento ID map', count($this->_externalIdToCategoryIdMap)));
+    	
+    }
     public function importAllCategory($categories)
     {
-        $this->_created_num = 0;
-        $this->_updated_num = 0;
+    	$this->resetCounters();
+    	$this->customHelper->reportStart($this->customHelper->__('Import All Category (%d)', count($categories)));
         foreach ($categories as $category) {
-            $this->customHelper->reportInfo($this->customHelper->__('Start process for category # %s', $category->id));
+        	if (empty($category->id)) {
+        		$this->customHelper->reportError("Category ID is empty, Skipping processing of the category.");
+        		continue;
+        	}
+            $this->customHelper->reportInfo($this->customHelper->__('Start process for category.ID=%s, Name=%s', 
+            		$category->id, $this->getXmlNodeValue($category->name, $category->id) ));
+            
             $this->importCategory($category);
-            $this->customHelper->reportInfo($this->customHelper->__('End process for category # %s', $category->id));
+            
+            $this->customHelper->reportInfo($this->customHelper->__('End process for category.ID=%s, Name=%s', 
+            		$category->id, $this->getXmlNodeValue($category->name, $category->id) ));
         }
-        $this->customHelper->reportSuccess($this->customHelper->__('categories was successfully created %s', $this->_created_num));
-        $this->customHelper->reportSuccess($this->customHelper->__('categories was successfully updated %s', $this->_updated_num));
-        $this->_created_num = 0;
-        $this->_updated_num = 0;
+        $this->customHelper->reportSuccess(
+        		$this->customHelper->__('Importing categories finished. Created: %d, Updated: %d, Skipped/Error: %d', 
+        				$this->_created_num, $this->_updated_num, 
+        				(count($categories) - $this->_created_num - $this->_updated_num)));
+        
+        $this->resetCounters();
+        
+        $this->customHelper->reportEnd("Import All Category");
+        $this->refreshExternalIdToCategoryIdMapping();
+    }
+    /**
+     * main function to import category
+     */
+    protected function importCategory($item)
+    {
+    	$this->customHelper->verboseLog($this->customHelper->__('Import Categoty Called for %s', $item->id));
+    
+    	$externalId = (string) $item->id;
+    	$magentoIds  = $this->checkExternalIdEx($externalId);
+    
+    	if ($magentoIds and count($magentoIds) > 0) {
+    		$this->customHelper->verboseLog($this->customHelper->__('$d Mapping (%s) found for External ID %s',
+    				count($magentoIds), implode(",", $magentoIds), $item->id));
+    		//update already existing category with this id
+    		foreach ($magentoIds as $magentoId) {
+    			$this->updateCategory($item, $magentoId);
+    		}
+    		$this->_updated_num++;
+    	}
+    	else {
+    		$this->customHelper->verboseLog($this->customHelper->__('Mapping not found for External ID %s.',
+    				$item->id));
+    		// category is not available hence create new
+    		$this->createCategory($item);
+    	}
+    	$this->customHelper->verboseLog($this->customHelper->__('Leaving Import Categoty for %s', $item->id));
+    }
+    /**
+     * checks for a category existance using external id
+     * @param external id of category
+     * @return Array of magento IDs associated with given external ID
+     */
+    protected function checkExternalIdEx($externalId)
+    {
+    	return (isset($this->_externalIdToCategoryIdMap[$externalId]) ?
+    			$this->_externalIdToCategoryIdMap[$externalId] : Null);
+    }
+    /**
+     * checks for a category existance using external id
+     * @param external id of category
+     */
+    protected function checkExternalId($externalId)
+    {
+    	$catsWithCustomAttr = array();
+    	$collection         = Mage::getModel('catalog/category')->getCollection();
+    	$collection->addAttributeToSelect("external_id");
+    	//Do a left join, and get values that aren't null - you could add other conditions in the second parameter also (check out all options in the _getConditionSql method of lib/Varien/Data/Collection/Db.php
+    	$collection->addAttributeToFilter('external_id', $externalId, 'left');
+    	foreach ($collection as $category) {
+    		$catsWithCustomAttr[$category->getId()] = $category->getExternalId();
+    	}
+    	return $catsWithCustomAttr;
+    }
+    /* create category
+    * */
+    protected function createCategory($item)
+    {
+    	$this->customHelper->verboseLog($this->customHelper->__("Creating Cagegory. ID: %s, Name:%s",
+    			$item->id, $item->name));
+    	$parentId             = ((string) $item->isRoot == 'Y') ? 1 : $this->_default_category_id;
+    	$isActive              = ((string) $item->isActive == 'Y') ? true : false;
+    
+    	$category        = Mage::getModel('catalog/category')->setStoreId($this->_store_id);
+    	$parent_category = $this->_initCategory($parent_id, $this->_store_id);
+    	if ($parent_category){
+    		$this->customHelper->verboseLog($this->customHelper->__("Parent cagegory of %s is %s",
+    				$item->id, $parent_category->getId()));
+    		$category->addData(array(
+    				'path' => implode('/', $parent_category->getPathIds())
+    		));
+    		/* @var $validator Mage_Catalog_Model_Api2_Product_Validator_Product */
+    		$category->setParentId($parent_category->getId());
+    		$category->setAttributeSetId($category->getDefaultAttributeSetId());
+    		$category->setData('name', (string) $item->name);
+    		$category->setData('include_in_menu', 1);
+    		$category->setData('meta_title', (string) $item->pageTitle);
+    		$category->setData('meta_keywords', (string) $item->metaKeywords);
+    		$category->setData('meta_description', (string) $item->metaDescription);
+    		$category->setData('description', (string) $item->description);
+    		$category->setData('available_sort_by', 'position');
+    		$category->setData('default_sort_by', 'position');
+    		$category->setData('is_active', $isActive);
+    		$category->setData('is_anchor', 1);
+    		$category->setData('external_id', (string) $item->id);
+    		$category->setData('external_cat_image', (string) $item->imageUrl);
+    		try {
+    			$this->customHelper->verboseLog($this->customHelper->__("Starting Validation for cagegory %s",
+    					$item->id));
+    			$validate = $category->validate();
+    			if ($validate === true) {
+    				$this->customHelper->verboseLog($this->customHelper->__("Validation for cagegory %s passed",
+    						$item->id));
+    				$category->save();
+    				$this->customHelper->verboseLog($this->customHelper->__("Cagegory %s Got Created successfully",
+    						$item->id));
+    				$this->_created_num++;
+    			}
+    			else {
+    				$this->customHelper->verboseLog($this->customHelper->__("Validation for cagegory %s Failed.",
+    						$item->id));
+    				foreach ($validate as $code => $error) {
+    					$errorText = ($error === true) ? 'Attribute "%s" is required' : '%s';
+    					$errorText = sprintf("Category Creation Failed for %s (%s).%s, Code:%s",
+    							$item->name, $item->id, $error, $code);
+    					$this->customHelper->reportError($errorText);
+    					$this->customHelper->sendLogEmail($this->logPath);
+    				}
+    			}
+    
+    		}
+    		catch (Exception $e) {
+    			$this->customHelper->reportError("Exception caught in createCategory. " . $e->getMessage());
+    			$this->customHelper->sendLogEmail($this->logPath);
+    		}
+    	}
+    }
+    
+    protected function updateCategory($item, $categoryId)
+    {
+    	$this->customHelper->verboseLog($this->customHelper->__("Updating Cagegory ID (%s): %s, Name:%s",
+    			$categoryId, $item->id, $item->name));
+    	$category = Mage::getModel('catalog/category')->load($categoryId);
+    	if (!empty($category)) {
+    		$this->customHelper->verboseLog($this->customHelper->__("Cagegory ID (%s): %s Loaded successfully.",
+    				$categoryId, $item->id));
+    		try {
+    			$isActive = ((string) $item->isActive == 'Y') ? 1 : 0;
+    			$category->setData('name', (string) $item->name);
+    			$category->setData('include_in_menu', 1);
+    			$category->setData('meta_title', (string) $item->pageTitle);
+    			$category->setData('meta_keywords', (string) $item->metaKeywords);
+    			$category->setData('meta_description', (string) $item->metaDescription);
+    			$category->setData('description', (string) $item->description);
+    			$category->setData('is_active', $isActive);
+    			$category->setData('is_anchor', 1);
+    			$category->setData('external_cat_image', (string) $item->imageUrl);
+    			Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
+    			$this->customHelper->verboseLog($this->customHelper->__("Saving Cagegory ID (%s) %s.",
+    					$categoryId, $item->id));
+    			$category->save();
+    			$this->customHelper->verboseLog($this->customHelper->__("Cagegory ID (%s) %s Saved.",
+    					$categoryId, $item->id));
+    		}
+    		catch (Exception $e) {
+    			$this->customHelper->reportError("Exception Caught in updateCategory. " . $e->getMessage());
+    			$this->customHelper->sendLogEmail($this->logPath);
+    		}
+    	}
+    	else {
+    		$this->customHelper->verboseLog($this->customHelper->__("Cagegory ID (%s): %s loading failed.",
+    				$categoryId, $item->id));
+    	}
+    }
+    
+    /**
+     * loads a category, if exists
+     * @param category id
+     */
+    protected function _initCategory($categoryId, $store = null)
+    {
+    	try {
+    		$category = Mage::getModel('catalog/category')->setStoreId($store)->load($categoryId);
+    		if ($category->getId()) {
+    			return $category;
+    		}
+    		$errorMsg = $this->customHelper->__('Parent category %s is not available', $categoryId);
+    		$this->customHelper->reportError($errorMsg);
+    		$this->customHelper->sendLogEmail($this->logPath);
+    	}
+    	catch (Exception $e) {
+    		$this->customHelper->reportError("Exception caught in initCategory. " . $e->getMessage());
+    		$this->customHelper->sendLogEmail($this->logPath);
+    	}
+    	return null;
     }
     
     public function parseAttribute()
@@ -1870,147 +2088,6 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
         $t1              = microtime(true);
         $time            = $t1 - $t0;
         $this->customHelper->reportInfo($this->customHelper->__('Found %s records', $count));
-    }
-    
-    /*
-     * create category
-     * */
-    protected function createCategory($item)
-    {
-        $default_root_category = $this->_default_category_id;
-        $parent_id             = ((string) $item->isRoot == 'Y') ? 1 : $default_root_category;
-        $isActive              = ((string) $item->isActive == 'Y') ? 1 : 0;
-        
-        $category        = Mage::getModel('catalog/category')->setStoreId($this->_store_id);
-        $parent_category = $this->_initCategory($parent_id, $this->_store_id);
-        if (!$parent_category->getId()) {
-            $this->customHelper->reportError($this->customHelper->__('parent category not found'));
-        } else {
-            $category->addData(array(
-                'path' => implode('/', $parent_category->getPathIds())
-            ));
-            /* @var $validator Mage_Catalog_Model_Api2_Product_Validator_Product */
-            $category->setParentId($parent_category->getId());
-            $category->setAttributeSetId($category->getDefaultAttributeSetId());
-            $category->setData('name', (string) $item->name);
-            $category->setData('include_in_menu', 1);
-            $category->setData('meta_title', (string) $item->pageTitle);
-            $category->setData('meta_keywords', (string) $item->metaKeywords);
-            $category->setData('meta_description', (string) $item->metaDescription);
-            $category->setData('description', (string) $item->description);
-            $category->setData('available_sort_by', 'position');
-            $category->setData('default_sort_by', 'position');
-            $category->setData('is_active', $isActive);
-            $category->setData('is_anchor', 1);
-            $category->setData('external_id', (string) $item->id);
-            $category->setData('external_cat_image', (string) $item->imageUrl);
-            try {
-                $validate = $category->validate();
-                if ($validate !== true) {
-                    foreach ($validate as $code => $error) {
-                        if ($error === true) {
-                            $this->customHelper->reportError($this->customHelper->__('Attribute "%s" is required', $code));
-                            $this->customHelper->sendLogEmail($this->logPath);
-                            Mage::throwException($this->customHelper->__->__('Attribute "%s" is required.', $code));
-                        } else {
-                            $this->customHelper->reportError($error);
-                            $this->customHelper->sendLogEmail($this->logPath);
-                            Mage::throwException($error);
-                        }
-                    }
-                }
-                $category->save();
-            }
-            catch (Exception $e) {
-                $this->customHelper->reportError($e->getMessage());
-                $this->customHelper->sendLogEmail($this->logPath);
-            }
-        }
-    }
-    
-    protected function updateCategory($item, $categoryId)
-    {
-        $category = Mage::getModel('catalog/category')->load($categoryId);
-        $isActive = ((string) $item->isActive == 'Y') ? 1 : 0;
-        $category->setData('name', (string) $item->name);
-        $category->setData('include_in_menu', 1);
-        $category->setData('meta_title', (string) $item->pageTitle);
-        $category->setData('meta_keywords', (string) $item->metaKeywords);
-        $category->setData('meta_description', (string) $item->metaDescription);
-        $category->setData('description', (string) $item->description);
-        $category->setData('is_active', $isActive);
-        $category->setData('is_anchor', 1);
-        $category->setData('external_cat_image', (string) $item->imageUrl);
-        Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
-        $category->save();
-    }
-    
-    /**
-     * main function to import category
-     */
-    protected function importCategory($item)
-    {
-        $externalId = (string) $item->id;
-        $externall  = $this->checkExternalId($externalId);
-        
-        if ($externall) {
-            if (count($externall) == 1) {
-                //update already existing category with this id
-                reset($externall); //to take 1st key of array
-                $first_key = key($externall);
-                $this->updateCategory($item, $first_key);
-                $this->_updated_num++;
-            } else {
-                foreach ($externall as $systemCatid => $v) {
-                    $this->updateCategory($item, $systemCatid);
-                }
-            }
-        } else {
-            // category is not available hence create new
-            if (count($externall) == 0) {
-                $this->createCategory($item);
-                $this->_created_num++;
-            }
-        }
-    }
-    
-    /**
-     * checks for a category existance using external id
-     * @param external id of category
-     */
-    protected function checkExternalId($externalId)
-    {
-        $catsWithCustomAttr = array();
-        $collection         = Mage::getModel('catalog/category')->getCollection();
-        $collection->addAttributeToSelect("external_id");
-        //Do a left join, and get values that aren't null - you could add other conditions in the second parameter also (check out all options in the _getConditionSql method of lib/Varien/Data/Collection/Db.php
-        $collection->addAttributeToFilter('external_id', $externalId, 'left');
-        foreach ($collection as $category) {
-            $catsWithCustomAttr[$category->getId()] = $category->getExternalId();
-        }
-        return $catsWithCustomAttr;
-    }
-    
-    /**
-     * loads a category, if exists
-     * @param category id
-     */
-    protected function _initCategory($categoryId, $store = null)
-    {
-        try {
-            $category = Mage::getModel('catalog/category')->setStoreId($store)->load($categoryId);
-            if (!$category->getId()) {
-                $errorMsg = $this->customHelper->__('Parent category %s is not available', $categoryId);
-                $this->customHelper->reportError($errorMsg);
-                $this->customHelper->sendLogEmail($this->logPath);
-                Mage::throwException($errorMsg);
-            }
-        }
-        catch (Exception $e) {
-            $this->customHelper->reportError($e->getMessage());
-            $this->customHelper->sendLogEmail($this->logPath);
-        }
-        return $category;
     }
     
     public function getCurrentRow()
