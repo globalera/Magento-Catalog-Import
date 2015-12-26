@@ -522,27 +522,28 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                                 );
                             } elseif ((string) $association->assocType == 3) {
                                 $preAssociatedArray[] = $prid;
-                                $this->_changeVisibility($prid);
+                                $this->_hideVisibility($prid);
                             } elseif ((string) $association->assocType == 4) {
                                 $bundleArray[]         = $prid;
                                 $bundleQuantityArray[] = (int) $association->quantity;
                                 $bundlePositionArray[] = (int) $position;
                             }
                         } elseif($prid && strtolower((string) $association->isActive) == 'n') {
-                           if ((string) $association->assocType == 0) {
+                            if ((string) $association->assocType == 0) {
                                 $crossArray[$prid] = array(
                                     'position' => $position
                                 );
                             } elseif ((string) $association->assocType == 1) {
-                                 $upsellArray[$prid] = array(
+                                $upsellArray[$prid] = array(
                                     'position' => $position
                                 );
                             } elseif ((string) $association->assocType == 2) {
-                                 $relatedArray[$prid] = array(
+                                $relatedArray[$prid] = array(
                                     'position' => $position
                                 );
                             } elseif ((string) $association->assocType == 3) {
-                                 $disAssociateArray[] = $prid;
+                                $disAssociateArray[] = $prid;
+                                $this->_bothVisibility($prid);
                             }
                         }
                     }
@@ -2229,12 +2230,21 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
         return $rowArray['magento_id'];
     }
     
-    private function _changeVisibility($proid)
+    private function _hideVisibility($proid)
     {
         $product = Mage::getModel('catalog/product');
         $product->load($proid);
         $product->setVisibility(Mage_Catalog_Model_Product_Visibility::VISIBILITY_NOT_VISIBLE);
         $product->save();
     }
+
+    private function _bothVisibility($proid)
+    {
+        $product = Mage::getModel('catalog/product');
+        $product->load($proid);
+        $product->setVisibility(Mage_Catalog_Model_Product_Visibility::VISIBILITY_BOTH);
+        $product->save();
+    }
+
 }
 ?>
