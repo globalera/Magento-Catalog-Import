@@ -22,23 +22,31 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
 {
     protected $customHelper;
     protected $logPath;
-    private $_externalIdToCategoryIdMap;
     
     public function __construct()
     {
         parent::__construct();
         $this->customHelper = Mage::helper('customimport');
         $this->logPath      = Mage::getBaseDir('log') . '/customimport.log';
-        $this->_externalIdToCategoryIdMap = array();
+        $this->_store_id    = Mage::app()->getWebsite()->getDefaultGroup()->getDefaultStoreId();
+        $this->_default_category_id = Mage::app()->getStore('default')->getRootCategoryId();
+        $this->_xmlObj = null;
+        
+        $this->_created_num = 0;
+        $this->_updated_num = 0;
     }
     
     public function parseXml($xmlPath)
     {
-        $this->_store_id            = Mage::app()->getWebsite()->getDefaultGroup()->getDefaultStoreId();
-        $this->_default_category_id = Mage::app()->getStore('default')->getRootCategoryId();
-        $this->_xmlObj              = new Varien_Simplexml_Config($xmlPath);
+        $this->_xmlObj = new Varien_Simplexml_Config($xmlPath);
+        $this->customHelper->reportInfo($this->customHelper->__('Loaded File %s to import catalog', 
+        		$xmlPath));
     }
-    
+    protected function  resetCounters()
+    {
+    	$this->_created_num = 0;
+        $this->_updated_num = 0;
+    }
     public function reindexDB($val)
     {
         $process = Mage::getModel('index/process')->load($val);
@@ -79,237 +87,19 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             return false;
         }
     }
-    private function getXmlNodeValue($node_value, $default_value = "", $to_upper = false)
-    {
-    	$return_value = (empty($node_value) ? $default_value : (string)$node_value);
-    	return ($to_upper ? strtoupper($return_value) : $return_value);
-    }
-    private function resetCounters()
-	{
-		$this->_created_num = 0;
-	    $this->_updated_num = 0;
-	}
-    private function refreshExternalIdToCategoryIdMapping()
-    {
-    	$this->customHelper->verboseLog("Refreshing Exertnal ID to Magento ID map.");
-    	
-    	unset($this->_externalIdToCategoryIdMap);
-    	$this->_externalIdToCategoryIdMap = array();
-    	$catsWithCustomAttr = array();
-    	$collection         = Mage::getModel('catalog/category')->getCollection();
-    	$collection->addAttributeToSelect("external_id");
-    	if(!empty($collection))
-    	{
-	    	foreach ($collection as $category)
-	    	{
-	    		if(!empty($category->getExternalId()))
-	    			$this->_externalIdToCategoryIdMap[$category->getExternalId()][] = $category->getId();
-	    	}
-    	}
-    	$this->customHelper->verboseLog($this->customHelper->__('Refreshed (%d) Exertnal ID to Magento ID map', count($this->_externalIdToCategoryIdMap)));
-    	
-    }
+    
     public function importAllCategory($categories)
     {
-    	$this->resetCounters();
-    	$this->customHelper->reportStart($this->customHelper->__('Import All Category (%d)', count($categories)));
+        $this->resetCounters();
         foreach ($categories as $category) {
-        	if (empty($category->id)) {
-        		$this->customHelper->reportError("Category ID is empty, Skipping processing of the category.");
-        		continue;
-        	}
-            $this->customHelper->reportInfo($this->customHelper->__('Start process for category.ID=%s, Name=%s', 
-            		$category->id, $this->getXmlNodeValue($category->name, $category->id) ));
-            
+            $this->customHelper->reportInfo($this->customHelper->__('Start process for category # %s', $category->id));
             $this->importCategory($category);
-            
-            $this->customHelper->reportInfo($this->customHelper->__('End process for category.ID=%s, Name=%s', 
-            		$category->id, $this->getXmlNodeValue($category->name, $category->id) ));
+            $this->customHelper->reportInfo($this->customHelper->__('End process for category # %s', $category->id));
         }
-        $this->customHelper->reportSuccess(
-        		$this->customHelper->__('Importing categories finished. Created: %d, Updated: %d, Skipped/Error: %d', 
-        				$this->_created_num, $this->_updated_num, 
-        				(count($categories) - $this->_created_num - $this->_updated_num)));
+        $this->customHelper->reportSuccess($this->customHelper->__('categories was successfully created %s', $this->_created_num));
+        $this->customHelper->reportSuccess($this->customHelper->__('categories was successfully updated %s', $this->_updated_num));
         
         $this->resetCounters();
-        
-        $this->customHelper->reportEnd("Import All Category");
-        $this->refreshExternalIdToCategoryIdMapping();
-    }
-    /**
-     * main function to import category
-     */
-    protected function importCategory($item)
-    {
-    	$this->customHelper->verboseLog($this->customHelper->__('Import Categoty Called for %s', $item->id));
-    
-    	$externalId = (string) $item->id;
-    	$magentoIds  = $this->checkExternalIdEx($externalId);
-    
-    	if ($magentoIds and count($magentoIds) > 0) {
-    		$this->customHelper->verboseLog($this->customHelper->__('$d Mapping (%s) found for External ID %s',
-    				count($magentoIds), implode(",", $magentoIds), $item->id));
-    		//update already existing category with this id
-    		foreach ($magentoIds as $magentoId) {
-    			$this->updateCategory($item, $magentoId);
-    		}
-    		$this->_updated_num++;
-    	}
-    	else {
-    		$this->customHelper->verboseLog($this->customHelper->__('Mapping not found for External ID %s.',
-    				$item->id));
-    		// category is not available hence create new
-    		$this->createCategory($item);
-    	}
-    	$this->customHelper->verboseLog($this->customHelper->__('Leaving Import Categoty for %s', $item->id));
-    }
-    /**
-     * checks for a category existance using external id
-     * @param external id of category
-     * @return Array of magento IDs associated with given external ID
-     */
-    protected function checkExternalIdEx($externalId)
-    {
-    	return (isset($this->_externalIdToCategoryIdMap[$externalId]) ?
-    			$this->_externalIdToCategoryIdMap[$externalId] : Null);
-    }
-    /**
-     * checks for a category existance using external id
-     * @param external id of category
-     */
-    protected function checkExternalId($externalId)
-    {
-    	$catsWithCustomAttr = array();
-    	$collection         = Mage::getModel('catalog/category')->getCollection();
-    	$collection->addAttributeToSelect("external_id");
-    	//Do a left join, and get values that aren't null - you could add other conditions in the second parameter also (check out all options in the _getConditionSql method of lib/Varien/Data/Collection/Db.php
-    	$collection->addAttributeToFilter('external_id', $externalId, 'left');
-    	foreach ($collection as $category) {
-    		$catsWithCustomAttr[$category->getId()] = $category->getExternalId();
-    	}
-    	return $catsWithCustomAttr;
-    }
-    /* create category
-    * */
-    protected function createCategory($item)
-    {
-    	$this->customHelper->verboseLog($this->customHelper->__("Creating Cagegory. ID: %s, Name:%s",
-    			$item->id, $item->name));
-    	$parentId             = ((string) $item->isRoot == 'Y') ? 1 : $this->_default_category_id;
-    	$isActive              = ((string) $item->isActive == 'Y') ? true : false;
-    
-    	$category        = Mage::getModel('catalog/category')->setStoreId($this->_store_id);
-    	$parent_category = $this->_initCategory($parent_id, $this->_store_id);
-    	if ($parent_category){
-    		$this->customHelper->verboseLog($this->customHelper->__("Parent cagegory of %s is %s",
-    				$item->id, $parent_category->getId()));
-    		$category->addData(array(
-    				'path' => implode('/', $parent_category->getPathIds())
-    		));
-    		/* @var $validator Mage_Catalog_Model_Api2_Product_Validator_Product */
-    		$category->setParentId($parent_category->getId());
-    		$category->setAttributeSetId($category->getDefaultAttributeSetId());
-    		$category->setData('name', (string) $item->name);
-    		$category->setData('include_in_menu', 1);
-    		$category->setData('meta_title', (string) $item->pageTitle);
-    		$category->setData('meta_keywords', (string) $item->metaKeywords);
-    		$category->setData('meta_description', (string) $item->metaDescription);
-    		$category->setData('description', (string) $item->description);
-    		$category->setData('available_sort_by', 'position');
-    		$category->setData('default_sort_by', 'position');
-    		$category->setData('is_active', $isActive);
-    		$category->setData('is_anchor', 1);
-    		$category->setData('external_id', (string) $item->id);
-    		$category->setData('external_cat_image', (string) $item->imageUrl);
-    		try {
-    			$this->customHelper->verboseLog($this->customHelper->__("Starting Validation for cagegory %s",
-    					$item->id));
-    			$validate = $category->validate();
-    			if ($validate === true) {
-    				$this->customHelper->verboseLog($this->customHelper->__("Validation for cagegory %s passed",
-    						$item->id));
-    				$category->save();
-    				$this->customHelper->verboseLog($this->customHelper->__("Cagegory %s Got Created successfully",
-    						$item->id));
-    				$this->_created_num++;
-    			}
-    			else {
-    				$this->customHelper->verboseLog($this->customHelper->__("Validation for cagegory %s Failed.",
-    						$item->id));
-    				foreach ($validate as $code => $error) {
-    					$errorText = ($error === true) ? 'Attribute "%s" is required' : '%s';
-    					$errorText = sprintf("Category Creation Failed for %s (%s).%s, Code:%s",
-    							$item->name, $item->id, $error, $code);
-    					$this->customHelper->reportError($errorText);
-    					$this->customHelper->sendLogEmail($this->logPath);
-    				}
-    			}
-    
-    		}
-    		catch (Exception $e) {
-    			$this->customHelper->reportError("Exception caught in createCategory. " . $e->getMessage());
-    			$this->customHelper->sendLogEmail($this->logPath);
-    		}
-    	}
-    }
-    
-    protected function updateCategory($item, $categoryId)
-    {
-    	$this->customHelper->verboseLog($this->customHelper->__("Updating Cagegory ID (%s): %s, Name:%s",
-    			$categoryId, $item->id, $item->name));
-    	$category = Mage::getModel('catalog/category')->load($categoryId);
-    	if (!empty($category)) {
-    		$this->customHelper->verboseLog($this->customHelper->__("Cagegory ID (%s): %s Loaded successfully.",
-    				$categoryId, $item->id));
-    		try {
-    			$isActive = ((string) $item->isActive == 'Y') ? 1 : 0;
-    			$category->setData('name', (string) $item->name);
-    			$category->setData('include_in_menu', 1);
-    			$category->setData('meta_title', (string) $item->pageTitle);
-    			$category->setData('meta_keywords', (string) $item->metaKeywords);
-    			$category->setData('meta_description', (string) $item->metaDescription);
-    			$category->setData('description', (string) $item->description);
-    			$category->setData('is_active', $isActive);
-    			$category->setData('is_anchor', 1);
-    			$category->setData('external_cat_image', (string) $item->imageUrl);
-    			Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
-    			$this->customHelper->verboseLog($this->customHelper->__("Saving Cagegory ID (%s) %s.",
-    					$categoryId, $item->id));
-    			$category->save();
-    			$this->customHelper->verboseLog($this->customHelper->__("Cagegory ID (%s) %s Saved.",
-    					$categoryId, $item->id));
-    		}
-    		catch (Exception $e) {
-    			$this->customHelper->reportError("Exception Caught in updateCategory. " . $e->getMessage());
-    			$this->customHelper->sendLogEmail($this->logPath);
-    		}
-    	}
-    	else {
-    		$this->customHelper->verboseLog($this->customHelper->__("Cagegory ID (%s): %s loading failed.",
-    				$categoryId, $item->id));
-    	}
-    }
-    
-    /**
-     * loads a category, if exists
-     * @param category id
-     */
-    protected function _initCategory($categoryId, $store = null)
-    {
-    	try {
-    		$category = Mage::getModel('catalog/category')->setStoreId($store)->load($categoryId);
-    		if ($category->getId()) {
-    			return $category;
-    		}
-    		$errorMsg = $this->customHelper->__('Parent category %s is not available', $categoryId);
-    		$this->customHelper->reportError($errorMsg);
-    		$this->customHelper->sendLogEmail($this->logPath);
-    	}
-    	catch (Exception $e) {
-    		$this->customHelper->reportError("Exception caught in initCategory. " . $e->getMessage());
-    		$this->customHelper->sendLogEmail($this->logPath);
-    	}
-    	return null;
     }
     
     public function parseAttribute()
@@ -340,238 +130,261 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
         }
     }
     
+    public function parseAttributegrp()
+    {
+    	$xmlObj  = $this->_xmlObj;
+    	$xmlData = $xmlObj->getNode();
+    	if ($xmlData->attributeConfiguration->attributeGroups->attributeGroup instanceof Varien_Simplexml_Element) {
+    		return $xmlData->attributeConfiguration->attributeGroups->attributeGroup;
+    	}
+    }
+    
+    public function createAttributeSet($attribute_set_name, $external_id)
+    {
+    	$helper         = Mage::helper('adminhtml');
+    	$mapobj         = Mage::getModel('customimport/customimport');
+    	$attributeSetId = $mapobj->getAttributeSetIdByExternalId($external_id);
+    	$entityTypeId = $this->getEntityTypeId();
+    	$modelSet     = Mage::getModel('eav/entity_attribute_set')->setEntityTypeId($entityTypeId);
+    
+    	if (!empty($attributeSetId)) {
+    		$modelSet->load($attributeSetId);
+    		if (!$modelSet->getId()) {
+    			$this->customHelper->reportError(
+    					$this->customHelper->__('The attribute set %s (%s) no longer exists'),
+    					$external_id, $attribute_set_name);
+    			Mage::throwException($this->customHelper->__('This attribute set no longer exists.'));
+    		}
+    		$modelSet->setAttributeSetName(trim($attribute_set_name));
+    		$modelSet->validate();
+    		$modelSet->save();
+    		$this->customHelper->reportError(
+    				$this->customHelper->__('The attribute set %s (%s) created successfully.'),
+    				$external_id, $attribute_set_name);
+    		return $attributeSetId;
+    	}
+    
+    	$modelSet->setAttributeSetName($attribute_set_name);    // to add attribute set
+    	$defaultAttributeSetId = $this->getAttributeSetId('Default');
+    	try {
+    		if ($modelSet->validate()) {
+    			$attributeSetId = $modelSet->save()->getAttributeSetId();
+    			$modelSet->initFromSkeleton($defaultAttributeSetId)->save();
+    		}
+    	}
+    	catch (Exception $e) {
+    		$this->customHelper->reportError(
+    				$this->customHelper->__('Attribute set name %s, id %s already exists in Magento',
+    						$attribute_set_name, $external_id));
+    	}
+    	$mapobj->mapAttributeSet($external_id, $attributeSetId);
+    	return $attributeSetId;
+    }
+    public function removeAttributeFromGroup($attribute_group_id, $attributeSetId, $attribute_code)
+    {
+    	$mapobj           = Mage::getModel('customimport/customimport');
+    	$attributeGroupId = $mapobj->getAttributeGroupByExternalId($attribute_group_id, $attributeSetId); // $attribute_group_id is external group id
+    
+    	if ($attributeGroupId) {
+    		$setup        = new Mage_Eav_Model_Entity_Setup('core_setup');
+    		$attribute_id = $setup->getAttributeId('catalog_product', $attribute_code);
+    		$attribute_exists = $mapobj->isAttributeExistsInGroup($attribute_id, $attributeGroupId);
+    		if ($attribute_exists) {
+    			$installer = $this->getInstaller();
+    			$installer->startSetup();
+    			$installer->deleteTableRow('eav/entity_attribute', 'attribute_id', $attribute_id, 'attribute_set_id', $attributeSetId);
+    			$installer->endSetup();
+    		}
+    	}
+    }
+    
+    public function createAttributeGroup($attribute_group_name, $attribute_group_id, $attributeSetId)
+    {
+    	$model            = Mage::getModel('eav/entity_attribute_group');
+    	$mapobj           = Mage::getModel('customimport/customimport');
+    	$attributeGroupId = $mapobj->getAttributeGroupByExternalId($attribute_group_id, $attributeSetId);
+    	$group_id_exist = !empty($attributeGroupId);
+    	if ($group_id_exist) {
+    		$model->load($attributeGroupId);
+    		$old_group_name = $model->getAttributeGroupName();
+    		if (strcmp($old_group_name, $attribute_group_name) !== 0) { // if name has been updated
+    			$model->setAttributeGroupName($attribute_group_name);
+    			if (!$model->itemExists()) {
+    				$model->save();
+    			}
+    		}
+    	} else {
+    		$model->setAttributeGroupName($attribute_group_name)->setAttributeSetId($attributeSetId);
+    	}
+    	if (!$model->itemExists()) {
+    		try {
+    			$model->save();
+    		}
+    		catch (Exception $e) {
+    			$this->customHelper->reportError(
+    					$this->customHelper->__("An error occurred while saving the group %s (%s).",
+    							$attribute_group_id, $attribute_group_name));
+    			return false;
+    		}
+    	}
+    	if(!$group_id_exist) {
+    		$attributeGroupId = $mapobj->getGroupIdUsingSetId($attribute_group_name, $attributeSetId);
+    		$mapobj->mapAttributeGroup($attribute_group_id, $attributeGroupId, $attributeSetId); // externalid, magentoid
+    	}
+    	return true;
+    }
+    
+    
+    
+    public function removeAttributeGroup($attribute_group_name, $attribute_group_id, $attributeSetId)
+    {
+    	$setup            = new Mage_Eav_Model_Entity_Setup('core_setup');
+    	$mapobj           = Mage::getModel('customimport/customimport');
+    	$attributeGroupId = $mapobj->getAttributeGroupByExternalId($attribute_group_id, $attributeSetId);
+    	if ($attributeGroupId) {
+    		$setup->removeAttributeGroup('catalog_product', $attributeSetId, $attributeGroupId);
+    	} else {
+    		$this->customHelper->reportInfo($this->customHelper->__("Attribute Group is not available to be removed."));
+    	}
+    }
+    
     public function importAttributeSet($parsedAttributeSet)
     {
-        $attributeSet_groups           = array();
-        $attributeSet_groups['status'] = array();
-        $attributeSet_groups['id']     = array();
-        $attributegroup_id     = array();
-        $attributegroup_status = array();
-        
+        $attributeSetsPerGroup = array();
+        $this->customHelper->reportInfo(
+            		$this->customHelper->__("*********** Starting importAttributeSet (%d) ***********"),
+        			count($parsedAttributeSet));
         foreach ($parsedAttributeSet as $set) {
-            $this->customHelper->reportInfo($this->customHelper->__('Start process for attribute set # %s', $set->id));
+            $this->customHelper->reportInfo(
+            		$this->customHelper->__('Start process for attribute set # Id: %s, name: %s', 
+            		$set->id, $set->name));
             $attributeSetId   = (string) $set->id;
             $attributeSetName = (string) $set->name;
             
             if ($attributeSetName == '') {
                 $attributeSetName = $attributeSetId;
             }
-            $attributeGrp     = $set->attributeGroups->attributeGroup;
             $attribute_set_id = $this->createAttributeSet($attributeSetName, $attributeSetId);
-            
-            foreach ($attributeGrp as $attrgroup) {
-                $attributegroup_id                                   = (string) $attrgroup->id;
-                $attributegroup_status                               = (string) $attrgroup->isActive;
-                $attributeSet_groups['id'][$attributegroup_id][]     = $attribute_set_id;
-                $attributeSet_groups['status'][$attributegroup_id][] = $attributegroup_status;
+            if (empty($attribute_set_id)) {
+            	$this->customHelper->reportError(
+            			$this->customHelper->__('The attribute set id returned empty by createAttributeSet for %s (%s).'),
+            			$attributeSetId, $attributeSetName);
             }
-            unset($attributegroup_status);
-            unset($attributegroup_id);
-            $this->customHelper->reportInfo($this->customHelper->__('End process for attribute set # %s', $set->id));
+            else  {
+            	$attributeGroups = $set->attributeGroups->attributeGroup;
+            	foreach ($attributeGroups as $attributeGroup) {
+            		$attribute_set_status = $this->customHelper->getXmlNodeValue($attributeGroup->isActive, "Y", true);
+            		$attributeSetsPerGroup[$attributegroup_id][] = array("id" => $attribute_set_id,
+            				"status" => $attribute_set_status);
+            	}	
+            }
+            
+
+            $this->customHelper->reportInfo(
+            		$this->customHelper->__('End process for attribute set # Id: %s, name: %s', 
+            		$set->id, $set->name));
         }
         $this->attributeGroupsGlobal = $attributeSet_groups;
+        
+        $this->customHelper->reportInfo("*********** Exiting importAttributeSet ***********");
     }
-        
-    public function createAttributeSet($attribute_set_name, $external_id)
+
+    public function importAttributeGrp($attributeGroups)
     {
-        $helper         = Mage::helper('adminhtml');
-        $mapobj         = Mage::getModel('customimport/customimport');
-        $attributeSetId = $mapobj->getAttributeSetIdByExternalId($external_id);
-        $entityTypeId = $this->getEntityTypeId();
-        $modelSet     = Mage::getModel('eav/entity_attribute_set')->setEntityTypeId($entityTypeId);
-        
-        if (isset($attributeSetId) && !empty($attributeSetId)) {
-            $modelSet->load($attributeSetId);
-            if (!$modelSet->getId()) {
-                $this->customHelper->reportError($this->customHelper->__('This attribute set no longer exists'));
-                Mage::throwException($this->customHelper->__('This attribute set no longer exists.'));
-            }
-            $modelSet->setAttributeSetName(trim($attribute_set_name));
-            try{
-                $modelSet->validate();
-                $modelSet->save();
-            }
-            catch(Exception $e) {
-                $this->customHelper->reportError($this->customHelper->__('Attribute set name %s with id %s already exists in Magento system with same name', $attribute_set_name, $external_id));
-            }
-            return $attributeSetId;
+    	$this->customHelper->reportInfo(
+    			$this->customHelper->__("*********** Starting import Attribute Group (%d) ***********"),
+    			count($attributeGroups));
+        $attributeSetsPerGroup = $this->attributeGroupsGlobal;
+        foreach ($attributeGroups as $attributeGroup) {
+        	$groupId   = (string) $attribute->id;
+        	$groupName = (string) $attribute->name;
+        	if ($groupName == '') {
+        		$groupName = $groupId;
+        	}
+        	
+        	foreach ($this->attributeGroupsGlobal[$groupId] as $attribut_set) {
+        		if ($attribut_set['status'] == 'Y') {
+        			//create group here
+        			if(!$this->createAttributeGroup($groupName, $groupId, $attribut_set['id'])) {
+        				continue;
+        			}
+        			// loop for all attributes
+        			foreach ($attributeGroup->groupedAttributes->attribute as $groupedAttribute) {
+        				if ($this->customHelper->getXmlNodeValue($groupedAttribute->isActive,"Y", true) == 'Y') {
+        					// insert attributes inside group
+        					$attribute_sort_order = $this->customHelper->getXmlNodeValue($groupedAttribute->position, 0);
+        					$this->importAttributeInsideGroup($groupId, 
+        									$attribut_set['id'], (string)$groupedAttribute->id, 
+        									$attribute_sort_order);
+        				} else {
+        					$this->removeAttributeFromGroup($groupId, $attribut_set['id'], 
+        							(string)$groupedAttribute->id);
+        				}
+        			}
+        		} else {
+        			// remove group from this set
+        			$this->removeAttributeGroup($groupName, $groupId, $attribut_set['id']);
+        	
+        		}
+        	}
         }
-        
-        $modelSet->setAttributeSetName($attribute_set_name);    // to add attribute set
-        $defaultAttributeSetId = $this->getAttributeSetId('Default');
-        try {
-            if ($modelSet->validate()) {
-                $attributeSetId = $modelSet->save()->getAttributeSetId();
-                $modelSet->initFromSkeleton($defaultAttributeSetId)->save();
-            }
-        }
-        catch (Exception $e) {
-            $this->customHelper->reportError($this->customHelper->__('Attribute set name %s with id %s already exists in Magento system with same name', $attribute_set_name, $external_id));
-        }
-        $mapobj->mapAttributeSet($external_id, $attributeSetId);
-        return $attributeSetId;
-    }
-        
-    public function parseAttributegrp()
-    {
-        $xmlObj  = $this->_xmlObj;
-        $xmlData = $xmlObj->getNode();
-        if ($xmlData->attributeConfiguration->attributeGroups->attributeGroup instanceof Varien_Simplexml_Element) {
-            return $xmlData->attributeConfiguration->attributeGroups->attributeGroup;
-        }
+        $this->customHelper->reportInfo("*********** Exiting import Attribute Group ***********");
     }
     
-    public function importAttributeGrp($parsedAttribute)
+    public function importAttributeInsideGroup($attribute_group_id, $attributeSetId, 
+    											$attribute_code, $attribute_sort_order)
     {
-        $setOfGroups = $this->attributeGroupsGlobal;
-        foreach ($parsedAttribute as $attribute) {
-            $attributeSets             = array();
-            $attributesOfGroup         = array(); // array to store attribute detail info of attribute group
-            $attributesIdOfGroup       = array();
-            $attributesStatusOfGroup   = array();
-            $attributesSequenceOfGroup = array();
-            $groupAttributes = $attribute->groupedAttributes->attribute;
-            foreach ($groupAttributes as $grp) {
-                $attributesIdOfGroup[]       = (string) $grp->id;
-                $attributesStatusOfGroup[]   = (string) $grp->isActive ? (string) $grp->isActive : 'Y';
-                $attributesSequenceOfGroup[] = (string) $grp->position ? (string) $grp->position : 0;
-            }
-            
-            $attributesOfGroup['attr_ids']      = $attributesIdOfGroup;
-            $attributesOfGroup['attr_status']   = $attributesStatusOfGroup;
-            $attributesOfGroup['attr_sequence'] = $attributesSequenceOfGroup;
-            $groupId   = (string) $attribute->id;
-            $groupName = (string) $attribute->name;
-            
-            if ($groupName == '') {
-                $groupName = $groupId;
-            }
-            
-            $attributeSets['set_ids']    = $setOfGroups['id'][$groupId];
-            $attributeSets['set_status'] = $setOfGroups['status'][$groupId];
-            $this->manageAttributeGroup($groupName, $groupId, $attributeSets, $attributesOfGroup);
-            unset($attributeSets);
-            unset($attributesOfGroup);
-            unset($attributesIdOfGroup);
-            unset($attributesStatusOfGroup);
-            unset($attributesSequenceOfGroup);
-        }
+    	$mapobj           = Mage::getModel('customimport/customimport');
+    	$attributeGroupId = $mapobj->getAttributeGroupByExternalId($attribute_group_id, $attributeSetId); // $attribute_group_id is external group id
+    
+    	if ($attributeGroupId) {
+    		$setup            = new Mage_Eav_Model_Entity_Setup('core_setup');
+    		$attribute_id     = $setup->getAttributeId('catalog_product', $attribute_code);
+    		$attribute_exists = $mapobj->isAttributeExistsInGroup($attribute_id, $attributeGroupId);
+    		if ($attribute_exists) {
+    			$mapobj->updateSequenceOfAttribute($attributeGroupId, $attribute_id, $attribute_sort_order, $attribute_code);
+    		} else {
+    			$setup->addAttributeToGroup('catalog_product', $attributeSetId, $attributeGroupId, $attribute_id, $attribute_sort_order);
+    		}
+    	}
     }
     
     /**
     * setname and group are arrays
     * @param $attribute_group_id is external group id
     */
-    public function manageAttributeGroup($attribute_group_name, $attribute_group_id, $attribute_set_ids, $attributesOfGroup)
-    {
-        // loop for attribute sets
-        foreach ($attribute_set_ids['set_ids'] as $k => $set_id) {
-            if ($attribute_set_ids['set_status'][$k] == 'Y') {
-                //create group here
-                $res = $this->createAttributeGroup($attribute_group_name, $attribute_group_id, $set_id);
-                // loop for all attributes
-                foreach ($attributesOfGroup['attr_ids'] as $k => $attribute_code) {
-                    if ($attributesOfGroup['attr_status'][$k] == 'Y') {
-                        // insert attributes inside group
-                        $attributeSortOrder = 0;
-                        if (isset($attributesOfGroup['attr_sequence'])) {
-                            $attributeSortOrder = $attributesOfGroup['attr_sequence'][$k];
-                        }
-                        $this->importAttributeInsideGroup($attribute_group_id, $set_id, $attribute_code, $attributeSortOrder);
+//     public function manageAttributeGroup($attribute_group_name, $attribute_group_id, $attribute_set_ids, $attributesOfGroup)
+//     {
+//         // loop for attribute sets
+//         foreach ($attribute_set_ids['set_ids'] as $k => $set_id) {
+//             if ($attribute_set_ids['set_status'][$k] == 'Y') {
+//                 //create group here
+//                 $res = $this->createAttributeGroup($attribute_group_name, $attribute_group_id, $set_id);
+//                 // loop for all attributes
+//                 foreach ($attributesOfGroup['attr_ids'] as $k => $attribute_code) {
+//                     if ($attributesOfGroup['attr_status'][$k] == 'Y') {
+//                         // insert attributes inside group
+//                         $attributeSortOrder = 0;
+//                         if (isset($attributesOfGroup['attr_sequence'])) {
+//                             $attributeSortOrder = $attributesOfGroup['attr_sequence'][$k];
+//                         }
+//                         $this->importAttributeInsideGroup($attribute_group_id, $set_id, $attribute_code, $attributeSortOrder);
                         
-                    } else {
-                        $this->removeAttributeFromGroup($attribute_group_id, $set_id, $attribute_code);
-                    }
-                }
-            } else {
-                // remove group from this set
-                $this->removeAttributeGroup($attribute_group_name, $attribute_group_id, $set_id);
+//                     } else {
+//                         $this->removeAttributeFromGroup($attribute_group_id, $set_id, $attribute_code);
+//                     }
+//                 }
+//             } else {
+//                 // remove group from this set
+//                 $this->removeAttributeGroup($attribute_group_name, $attribute_group_id, $set_id);
                 
-            }
-        }
-    }
+//             }
+//         }
+//     }
     
-    public function createAttributeGroup($attribute_group_name, $attribute_group_id, $attributeSetId)
-    {
-        $model            = Mage::getModel('eav/entity_attribute_group');
-        $mapobj           = Mage::getModel('customimport/customimport');
-        $attributeGroupId = $mapobj->getAttributeGroupByExternalId($attribute_group_id, $attributeSetId);
-        if (isset($attributeGroupId) && !empty($attributeGroupId)) {
-            $model->load($attributeGroupId);
-            $oldGroupName = $model->getAttributeGroupName();
-            if ($oldGroupName != $attribute_group_name) { // if name has been updated
-                $model->setAttributeGroupName($attribute_group_name);
-                if (!$model->itemExists()) {
-                    $model->save();
-                }
-            }
-        } else {
-            $model->setAttributeGroupName($attribute_group_name)->setAttributeSetId($attributeSetId);
-            if ($model->itemExists()) {
-            } else {
-                try {
-                    $model->save();
-                }
-                catch (Exception $e) {
-                    $this->customHelper->reportError($this->customHelper->__("An error occurred while saving this group."));
-                }
-            }
-            $attributeGroupId = $mapobj->getGroupIdUsingSetId($attribute_group_name, $attributeSetId);
-            $mapobj->mapAttributeGroup($attribute_group_id, $attributeGroupId, $attributeSetId); // externalid, magentoid
-        }
-    }
     
-    public function removeAttributeFromGroup($attribute_group_id, $attributeSetId, $attribute_code)
-    {
-        $mapobj           = Mage::getModel('customimport/customimport');
-        $attributeGroupId = $mapobj->getAttributeGroupByExternalId($attribute_group_id, $attributeSetId); // $attribute_group_id is external group id
         
-        if ($attributeGroupId) {
-            $setup        = new Mage_Eav_Model_Entity_Setup('core_setup');
-            $attribute_id = $setup->getAttributeId('catalog_product', $attribute_code);
-            $attribute_exists = $mapobj->isAttributeExistsInGroup($attribute_id, $attributeGroupId);
-            if ($attribute_exists) {
-                $installer = $this->getInstaller();
-                $installer->startSetup();
-                $installer->deleteTableRow('eav/entity_attribute', 'attribute_id', $attribute_id, 'attribute_set_id', $attributeSetId);
-                $installer->endSetup();
-            }
-        }
-    }
     
-    public function removeAttributeGroup($attribute_group_name, $attribute_group_id, $attributeSetId)
-    {
-        $setup            = new Mage_Eav_Model_Entity_Setup('core_setup');
-        $mapobj           = Mage::getModel('customimport/customimport');
-        $attributeGroupId = $mapobj->getAttributeGroupByExternalId($attribute_group_id, $attributeSetId);
-        if ($attributeGroupId) {
-            $setup->removeAttributeGroup('catalog_product', $attributeSetId, $attributeGroupId);
-        } else {
-            $this->customHelper->reportInfo($this->customHelper->__("Attribute Group is not available to be removed."));
-        }
-    }
-        
-    public function importAttributeInsideGroup($attribute_group_id, $attributeSetId, $attribute_code, $attribute_sort_order)
-    {
-        $mapobj           = Mage::getModel('customimport/customimport');
-        $attributeGroupId = $mapobj->getAttributeGroupByExternalId($attribute_group_id, $attributeSetId); // $attribute_group_id is external group id
-        
-        if ($attributeGroupId) {
-            $setup            = new Mage_Eav_Model_Entity_Setup('core_setup');
-            $attribute_id     = $setup->getAttributeId('catalog_product', $attribute_code);
-	    if (!$attribute_id) {
-                $this->customHelper->reportError($this->customHelper->__("Attribute code %s is missing during attribute group %s import",$attribute_code, $attribute_group_id));
-            } else {
-
-	            $attribute_exists = $mapobj->isAttributeExistsInGroup($attribute_id, $attributeGroupId);
-        	    if ($attribute_exists) {
-                	$mapobj->updateSequenceOfAttribute($attributeGroupId, $attribute_id, $attribute_sort_order, $attribute_code, $attribute_group_id);
-	            } else {
-        	        $setup->addAttributeToGroup('catalog_product', $attributeSetId, $attributeGroupId, $attribute_id, $attribute_sort_order);
-            	    }
-	    }
-        }
-    }
     
     public function getAttributeGroupId($attribute_group_name, $attribute_set_name)
     {
@@ -730,36 +543,36 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                                 $preCrossArray[$prid] = array(
                                     'position' => $position
                                 );
-                            } elseif ((string) $association->assocType == 1) {
+                            } else if ((string) $association->assocType == 1) {
                                 $preUpsellArray[$prid] = array(
                                     'position' => $position
                                 );
-                            } elseif ((string) $association->assocType == 2) {
+                            } else if ((string) $association->assocType == 2) {
                                 $preRelatedArray[$prid] = array(
                                     'position' => $position
                                 );
-                            } elseif ((string) $association->assocType == 3) {
+                            } else if ((string) $association->assocType == 3) {
                                 $preAssociatedArray[] = $prid;
                                 $this->_changeVisibility($prid);
-                            } elseif ((string) $association->assocType == 4) {
+                            } else if ((string) $association->assocType == 4) {
                                 $bundleArray[]         = $prid;
                                 $bundleQuantityArray[] = (int) $association->quantity;
                                 $bundlePositionArray[] = (int) $position;
                             }
-                        } elseif($prid && strtolower((string) $association->isActive) == 'n') {
+                        } else if($prid && strtolower((string) $association->isActive) == 'n') {
                            if ((string) $association->assocType == 0) {
                                 $crossArray[$prid] = array(
                                     'position' => $position
                                 );
-                            } elseif ((string) $association->assocType == 1) {
+                            } else if ((string) $association->assocType == 1) {
                                  $upsellArray[$prid] = array(
                                     'position' => $position
                                 );
-                            } elseif ((string) $association->assocType == 2) {
+                            } else if ((string) $association->assocType == 2) {
                                  $relatedArray[$prid] = array(
                                     'position' => $position
                                 );
-                            } elseif ((string) $association->assocType == 3) {
+                            } else if ((string) $association->assocType == 3) {
                                  $disAssociateArray[] = $prid;
                             }
                         }
@@ -863,63 +676,53 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
         }
     }
     
-    public function parseCategoryRelation()
-    {
-    	$xmlData = $this->_xmlObj->getNode();
-    	if ($xmlData->categoryRelations->categoryRelation instanceof Varien_Simplexml_Element) {
-    		return $xmlData->categoryRelations->categoryRelation;
-    	}
-    	return null;
-    }
     public function parseAndUpdateCategoryRelation()
     {
-    	$categoryRelations = $this->parseCategoryRelation();
-        $categoryRelationStatus = 0;
-        $this->customHelper->reportStart($this->customHelper->__('Update Category Relations(%d)', count($categoryRelations)));
-        if (!empty($categoryRelations)) {
-        	$categoryRelationStatus = 1;
-            foreach ($categoryRelations as $catRelation) {
-                $parentCatergotyId  = (string) $catRelation->parentId;
-                $this->customHelper->verboseLog(
-                		$this->customHelper->__('parseAndUpdateCategoryRelation: Processing parent %s', 
-                									$parentCatergotyId));
-                $magentoIds  = $this->checkExternalIdEx($parentCatergotyId);
-                if (!empty(checkExternalIdEx)) { //check if parent id exists.
-                	foreach ($magentoIds as $magentoId) {
-	                	foreach ($catRelation->subCategory as $subCategory) {
-	                                $this->updateCategoryRelation($subCategory, $magentoId, $parentCatergotyId);
-	                	}
-                	}
-                }
-                else {
+        $xmlObj                 = $this->_xmlObj;
+        $xmlData                = $xmlObj->getNode();
+        $this->_cat_relation    = $xmlData->categoryRelations->categoryRelation;
+        $categoryRelationStatus = 1;
+        if (count($this->_cat_relation) > 0) {
+            foreach ($this->_cat_relation as $catRelation) {
+                $parent    = (string) $catRelation->parentId;
+                $externall = $this->checkExternalId($parent);
+                if ($externall) { //check if parent id exists.
+                    if (count($externall) == 1) {
+                        reset($externall); //to take 1st key of array
+                        $first_key = key($externall);
+                        foreach ($catRelation->subCategory as $sub) {
+                            $this->updateCategoryRelation($sub, $first_key, $parent);
+                        }
+                    } else {
+                        foreach ($externall as $systemCatid => $v) {
+                            foreach ($catRelation->subCategory as $sub) {
+                                $this->updateCategoryRelation($sub, $systemCatid, $parent);
+                            }
+                        }
+                    }
+                } else {
                     $categoryRelationStatus = 2;
-                    $this->customHelper->reportError(
-                    		$this->customHelper->__('parseAndUpdateCategoryRelation: Parent category "%s" not found.', 
-                    		$parentCatergotyId));
+                    $this->customHelper->reportError($this->customHelper->__('Parent category not found : ') . $parent);
                 }
             }
+        } else {
+            $categoryRelationStatus = 0;
         }
-        $this->customHelper->reportEnd("Update Category Relations");
         return $categoryRelationStatus;
     }
     
     //duplicating categoryid 
     protected function duplicateCategory($categoryId, $parentId, $status)
     {
-    	$this->customHelper->verboseLog($this->customHelper->__(
-    			'duplicateCategory function called with categoryId: %s, ParentId:%s.',
-    			$categoryId, $parentId));
-        $parent_id             = ($parentId) ? $parentId : $this->_default_category_id;
+        $default_root_category = $this->_default_category_id;
+        $parent_id             = ($parentId) ? $parentId : $default_root_category;
         $isActive              = ($status == 'Y') ? 1 : 0;
-        $parent_category       = $this->_initCategory($parent_id, $this->_store_id);
-        if (!$parent_category->getId()) {
-        	$this->customHelper->reportError($this->customHelper->__("Failed to Load Parent Category %s(%s). ",
-        			$parentId, $parent_id));
-        	return false;
-        }
         $category              = Mage::getModel('catalog/category')->setStoreId($this->_store_id)->load($categoryId); //load category to duplicate
         $duplicate_category    = Mage::getModel('catalog/category')->setStoreId($this->_store_id);
-        
+        $parent_category       = $this->_initCategory($parentId, $this->_store_id);
+        if (!$parent_category->getId()) {
+            exit;
+        }
         $duplicate_category->addData(array(
             'path' => implode('/', $parent_category->getPathIds())
         ));
@@ -1000,34 +803,30 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     public function updateCategoryRelation($subcat, $p_id, $parent_external_id)
     {
         $ext_subid   = (string) $subcat->id;
-        $isActive = ((string) $subcat->isActive == 'Y') ? 1 : 0;
-        $actualSubId = $this->checkExternalIdEx($ext_subid);
-        $this->customHelper->verboseLog(
-    			$this->customHelper->__(
-    					'updateCategoryRelation Called for PID: %s, External PID: %s, SubID: %s, Status: %d', 
-    			$p_id, $parent_external_id, $item->id, $isActive));
-        if (!empty($actualSubId)) {
-        	$mapObj      = Mage::getModel('customimport/customimport');
+        $actualSubId = $this->checkExternalId($ext_subid);
+        $mapObj      = Mage::getModel('customimport/customimport');
+        
+        if ($actualSubId) {
             if (count($actualSubId) == 1) {
-                $subcat_id   = $actualSubId[0];
+                reset($actualSubId); //to take 1st key of array
+                $subcat_id   = key($actualSubId);
                 $category_id = $mapObj->isSubcategoryExists($ext_subid, $p_id); // external subcat id , parent magento id
                 
                 if ($category_id) {
-                	$this->customHelper->verboseLog(
-                			$this->customHelper->__('updateCategoryRelation: Association of PID: %s, External PID: %s and SubID: %s already exist',
-                					$p_id, $parent_external_id, $item->id));
                     $category = Mage::getModel('catalog/category')->setStoreId($this->_store_id)->load($subcat_id);
+                    $isActive = ((string) $subcat->isActive == 'Y') ? 1 : 0;
                     $category->setData('is_active', $isActive);
                     $category->save();
-                }
-                else {
+                } else {
                     $category_id = $mapObj->isCategoryExists($ext_subid);
                     if ($category_id) {
+                        $isActive = ((string) $subcat->isActive);
                         $status   = $this->getTreeCategories($category_id, $p_id, $isActive, false);
                     } else {
                         // category is not under any other parent , move
                         $category = Mage::getModel('catalog/category')->setStoreId($this->_store_id)->load($subcat_id);
                         $category->move($p_id, 0);
+                        $isActive = ((string) $subcat->isActive == 'Y') ? 1 : 0;
                         $category->setData('is_active', $isActive);
                         $category->save();
                         $mapObj->updateParent($p_id, $subcat_id);
@@ -1039,20 +838,21 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 if ($category_id) {
                     //echo 'subcat present in this cat '.$ext_subid;
                     $category = Mage::getModel('catalog/category')->setStoreId($this->_store_id)->load($category_id);
+                    $isActive = ((string) $subcat->isActive == 'Y') ? 1 : 0;
                     $category->setData('is_active', $isActive);
                     $category->save();
-                } elseif ($category_id = $mapObj->isCategoryExists($ext_subid)) {
+                } else if ($category_id = $mapObj->isCategoryExists($ext_subid)) {
+                    $isActive = ((string) $subcat->isActive);
                     $status   = $this->getTreeCategories($category_id, $p_id, $isActive, false);
                 } else {
                     // category is not under any other parent , move                   
-                    $this->customHelper->reportError($this->customHelper->__('block will not execute as category is not under any other parent'));
+                    $this->customHelper->reportInfo($this->customHelper->__('block will not execute as category is not under any other parent'));
                 }
             }
-        }
-        else {
-        	$this->customHelper->reportError(
-        			$this->customHelper->__('There was no magento (subcategory) id found for external id %s ', 
-        					$ext_subid));
+        } else {
+            if (count($actualSubId) == 0) {
+                $this->customHelper->reportError($this->customHelper->__('There was no subcategory id found %s ', $ext_subid));
+            }
         }
     }
     
@@ -1078,14 +878,14 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             $asid = $itemids["asid"];
             if (!isset($pid)) {
                 if (!isset($asid)) {
-                    $this->customHelper->reportError($this->customHelper->__('Cannot create product sku  %s ', $item->id));
+                    $this->customHelper->reportError($this->customHelper->__('cannot create product sku  %s ', $item->id));
                     return false;
                 }
                 if ((string) $item->type == 'configurable') {
                     $this->createConfigurableProduct($item, $asid); //create con product
-                } elseif ((string) $item->type == 'simple') {
+                } else if ((string) $item->type == 'simple') {
                     $this->createProduct($item, $asid); //create simple product
-                } elseif ((string) $item->type == 'bundle') {
+                } else if ((string) $item->type == 'bundle') {
                     $this->createBundleProduct($item, $asid); //create bundle product
                 } else {
                     $this->customHelper->reportError($this->customHelper->__('Import function does not support product type of record: %s ', $item->id));
@@ -1096,17 +896,18 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 try {
                     if ((string) $item->type == 'configurable') {
                         $this->updateConfigurableProduct($item, $pid); //create con product
-                    } elseif ((string) $item->type == 'simple') {
+                    } else if ((string) $item->type == 'simple') {
                         $this->updateProduct($item, $pid); //create simple product
-                    } elseif ((string) $item->type == 'bundle') {
+                    } else if ((string) $item->type == 'bundle') {
                         $this->updateBundleProduct($item, $pid); //create simple product
                     }
-                } catch (Exception $e) {
-                    $this->customHelper->reportError($this->customHelper->__('Product update failed for # %s', $item->id));
+                }
+                catch (Exception $e) {
+                    $this->customHelper->reportError($this->customHelper->__('ERROR: Product can not created for %s', $item->id));
                 }
             }
         } else {
-            $this->customHelper->reportInfo($this->customHelper->__('Product import skipped due to some error for # %s ', $item->id));
+            $this->customHelper->reportInfo($this->customHelper->__('ERROR: Product %s is skipped due to some error. ', $item->id));
         }
     }
     
@@ -1177,31 +978,21 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             }
 
             foreach ($config_attribute_array as $attr) {
+                $external_id = $configAttributeValue[$attr][0]; // valueDefId from XML for an attribute
                 $model       = Mage::getModel('catalog/resource_eav_attribute');
                 $loadedattr  = $model->loadByCode('catalog_product', $attr);
                 $attr_id     = $loadedattr->getAttributeId(); // attribute id of magento
                 $attr_type   = $loadedattr->getFrontendInput();
-                if ($attr_type == 'select' || $attr_type == 'multiselect') {
-                    $external_id = $configAttributeValue[$attr][0]; // valueDefId from XML for an attribute
+                if ($attr_type == 'select' || $attr_type == 'multiselect' || $attr_type == 'boolean') {
                     $mapObj    = Mage::getModel('customimport/customimport');
                     $option_id = $mapObj->isOptionExistsInAttribute($external_id, $attr_id);
                     if ($option_id) {
                         $product->setData($attr, $option_id);
-                    } else {
-		        $this->customHelper->reportError($this->customHelper->__('Attribute %s has an undefined option value %s. Hence skipping product # %s', $attr, $external_id, $item->id));
-                        return;
-		    }
-                } elseif ($attr_type == 'text' || $attr_type == 'textarea') {
+                    }
+                } else if ($attr_type == 'text' || $attr_type == 'textarea')
+                {
                     $attr_value = $configAttributeValue[$attr][1];
                     $product->setData($attr, $attr_value);
-                } elseif ($attr_type == 'boolean') {
-                    $optVal = Mage::getSingleton('customimport/customimport')->getOptVal($configAttributeValue[$attr][0]);
-                    if (strtolower($optVal->getValue()) == 'y' || strtolower($optVal->getValue()) == 'yes') {
-                        $attOptVal = 1;
-                    } else {
-                        $attOptVal = 0;
-                    }
-                    $product->setData($attr, $attOptVal);
                 }
             }
             
@@ -1268,8 +1059,8 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             $catalogNewproductDays = Mage::getStoreConfig('catalog/newproduct/days', Mage::app()->getStore());
             if (!empty($catalogNewproductDays) && $catalogNewproductDays >= 0) {
                 $currenDateTime = date("Y-m-d H:i:s", Mage::getModel('core/date')->timestamp(time()));
-                $new_from_date = date($format, strtotime('1 days' . $currenDateTime));
-                $new_to_date = date($format, strtotime($catalogNewproductDays . ' days' . $new_from_date));
+                $new_from_date = $currenDateTime;
+                $new_to_date   = date($format, strtotime($catalogNewproductDays . ' days' . $new_from_date));
                 $product->setNewsFromDate($new_from_date);
                 $product->setNewsToDate($new_to_date);
             }
@@ -1354,10 +1145,6 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                         $model                 = Mage::getModel('catalog/resource_eav_attribute');
                         $attr                  = $model->loadByCode('catalog_product', $attribute_code);
                         $attr_id               = $attr->getAttributeId();
-                        if (!$attr_id) {
-                            $this->customHelper->reportError($this->customHelper->__('Attribute %s is not available in magento. Hence skipping product # %s', $attribute_code, $item->id));
-                            return;
-                        }
                         $ProductAttributeIds[] = $attr_id;
                         $attribute_label       = $attr->getFrontendLabel();
                         $attr_detail           = array(
@@ -1375,36 +1162,21 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                     $product->setConfigurableAttributesData($attribute_detail);
                     $product->setCanSaveConfigurableAttributes(1);
                     foreach ($config_attribute_array as $attr) {
+                        $external_id = $configAttributeValue[$attr][0]; // valueDefId from XML for an attribute
                         $model       = Mage::getModel('catalog/resource_eav_attribute');
                         $loadedattr  = $model->loadByCode('catalog_product', $attr);
                         $attr_id     = $loadedattr->getAttributeId(); // attribute id of magento
-                        if (!$attr_id) {
-                            $this->customHelper->reportError($this->customHelper->__('Attribute %s is not available in magento. Hence skipping product # %s', $attr, $item->id));
-                            return;
-                        } else {
-                            $attr_type   = $loadedattr->getFrontendInput();
-                            if ($attr_type == 'select' || $attr_type == 'multiselect') {
-                                $external_id = $configAttributeValue[$attr][0]; // valueDefId from XML for an attribute
-                                $mapObj    = Mage::getModel('customimport/customimport');
-                                $option_id = $mapObj->isOptionExistsInAttribute($external_id, $attr_id);
-                                if ($option_id) {
-                                    $product->setData($attr, $option_id);
-                                } else {
-                                    $this->customHelper->reportError($this->customHelper->__('Attribute %s has an undefined option value %s. Hence skipping product # %s', $attr, $external_id, $item->id));
-                                    return;
-                                }
-                            } elseif ($attr_type == 'text' || $attr_type == 'textarea') {
-                                $attr_value = $configAttributeValue[$attr][1];
-                                $product->setData($attr, $attr_value);
-                            } elseif ($attr_type == 'boolean') {
-                                $optVal = Mage::getSingleton('customimport/customimport')->getOptVal($configAttributeValue[$attr][0]);
-                                if (strtolower($optVal->getValue()) == 'y' || strtolower($optVal->getValue()) == 'yes') {
-                                    $attOptVal = 1;
-                                } else {
-                                    $attOptVal = 0;
-                                }
-                                $product->setData($attr, $attOptVal);
+                        $attr_type   = $loadedattr->getFrontendInput();
+                        if ($attr_type == 'select' || $attr_type == 'multiselect' || $attr_type == 'boolean') {
+                            $mapObj    = Mage::getModel('customimport/customimport');
+                            $option_id = $mapObj->isOptionExistsInAttribute($external_id, $attr_id);
+                            if ($option_id) {
+                                $product->setData($attr, $option_id);
                             }
+                        } else if ($attr_type == 'text' || $attr_type == 'textarea')
+                            {
+			                $attr_value = $configAttributeValue[$attr][1];
+                            $product->setData($attr, $attr_value);
                         }
                     }
                     try {
@@ -1437,18 +1209,20 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                         $stockStatus->assignProduct($product);
                         $stockStatus->saveProductStatus($product->getId(), 1);
                         $this->_created_num++;
-                    } catch (Exception $e) {
+                    }
+                    catch (Exception $e) {
                         $this->customHelper->writeCustomLog('<span style="color:red;">' . $e->getMessage() . '</span>', $this->logPath);
                         $this->customHelper->sendLogEmail($this->logPath);
+                        echo "exception:$e";
                     }
                 } else {
-                    $this->customHelper->reportError($this->customHelper->__('Could not create super attribute for configurable product from %s. Hence skipped product # %s', array_values($superattribute_array), $item->id));
+                    $this->customHelper->reportError($this->customHelper->__('Could not get super attribute for product. Hence skipped product : %s', $item->id));
                 }
             } else {
-                $this->customHelper->reportError($this->customHelper->__('No super attributes defined for configurable product. Hence skipped product # %s', $item->id));
+                $this->customHelper->reportError($this->customHelper->__('Super attribute is missing. Hence skipped product : %s', $item->id));
             }
         } else {
-            $this->customHelper->reportError($this->customHelper->__('Attribute set ID # %s is missing. Hence skipped product # %s', $asid, $item->id));
+            $this->customHelper->reportError($this->customHelper->__('Attribute set ID # %s is missing. Hence skipped product SKU # %s', $attid, $item->id));
         }
     }
     
@@ -1468,8 +1242,8 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             $catalogNewproductDays = Mage::getStoreConfig('catalog/newproduct/days', Mage::app()->getStore());
             if (!empty($catalogNewproductDays) && $catalogNewproductDays >= 0) {
                 $currenDateTime = date("Y-m-d H:i:s", Mage::getModel('core/date')->timestamp(time()));
-                $new_from_date = date($format, strtotime('1 days' . $currenDateTime));
-                $new_to_date = date($format, strtotime($catalogNewproductDays . ' days' . $new_from_date));
+                $new_from_date = $currenDateTime;
+                $new_to_date   = date($format, strtotime($catalogNewproductDays . ' days' . $new_from_date));
                 $product->setNewsFromDate($new_from_date);
                 $product->setNewsToDate($new_to_date);
             }
@@ -1563,12 +1337,14 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                     }
                 }
             }
+            $skipStatus = 0;
             foreach ($multiple_values as $attribute_code => $attribute_values) {
                 $loadedattr = $model->loadByCode('catalog_product', $attribute_code);
                 $attr_id    = $loadedattr->getAttributeId(); // attribute id of magento
                 if (!$attr_id) {
-                    $this->customHelper->reportError($this->customHelper->__('Attribute %s is not available in magento. Hence skipping product # %s', $attribute_code, $item->id));
-                    return;
+                    $this->customHelper->reportError($this->customHelper->__('Skipped product %s,attribute is not available in magento database: %s', $item->id, $attribute_code));
+                    $skipStatus = 1;
+                    break;
                 } else {
                     $attr_type = $loadedattr->getFrontendInput();
                     if ($attr_type == 'select' && count($attribute_values) == 1) {
@@ -1576,32 +1352,31 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                         $option_id = $mapObj->isOptionExistsInAttribute($attribute_values[0], $attr_id);
                         if ($option_id) {
                             $product->setData($attribute_code, $option_id);
-                        }  else {
-                            $this->customHelper->reportError($this->customHelper->__('Attribute %s has an undefined option value %s. Hence skipping product # %s', $attribute_code, $attribute_values[0], $item->id));
-                            return;
                         }
-                    } elseif ($attr_type == 'select' && count($attribute_values) > 1) {
+                    }
+                    if ($attr_type == 'select' && count($attribute_values) > 1) {
                         //multiple values for attribute which is not multiselect
-                        $this->customHelper->reportError($this->customHelper->__('Attribute %s can not have multiple values. Hence skipping product # %s', $attribute_code, $item->id));
-                        return;
-                    } elseif ($attr_type == 'multiselect') {
+                        $this->customHelper->reportError($this->customHelper->__('NOTICE: Attribute %s can not have multiple values. Hence skipping product having id %s', $attribute_code, $item->id));
+                        $skipStatus = 1;
+                        break;
+                    }
+                    if ($attr_type == 'multiselect') {
                         $multivalues = array();
                         foreach ($attribute_values as $value) {
                             $mapObj    = Mage::getModel('customimport/customimport');
                             $option_id = $mapObj->isOptionExistsInAttribute($value, $attr_id);
                             if ($option_id) {
                                 $multivalues[] = $option_id;
-                            } else {
-                                $this->customHelper->reportError($this->customHelper->__('Attribute %s has an undefined option value %s. Hence skipping product id %s', $attribute_code, $value, $item->id));
-                                return;
                             }
                         }
                         $product->addData(array(
                             $attribute_code => $multivalues
                         ));
-                    } elseif ($attr_type == 'text' || $attr_type == 'textarea') {
+                    }
+                    
+                    if ($attr_type == 'text' || $attr_type == 'textarea') {
                         $product->setData($attribute_code, $attribute_values[1]);
-                    } elseif ($attr_type == 'boolean') {
+                    } else if ($attr_type == 'boolean') {
                         $optVal = Mage::getSingleton('customimport/customimport')->getOptVal($attribute_values[0]);
                         if (strtolower($optVal->getValue()) == 'y' || strtolower($optVal->getValue()) == 'yes') {
                             $attOptVal = 1;
@@ -1613,40 +1388,45 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 }
             }
             try {
-                Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
-                $productId = $product->save()->getId();
-                if ($manageItem == 'N' || $manageItem == 'n') {
-                    $product->setStockData(array(
-                        'use_config_backorders' => 0,
-                        'is_in_stock' => 1,
-                        'manage_stock' => 0
-                    ));
-                    //code for instock while update product
-                    $stockItem = Mage::getModel('cataloginventory/stock_item');
-                    $stockItem->assignProduct($product);
-                    $stockItem->setData('use_config_manage_stock', 0);
-                    $stockItem->setData('manage_stock', 0);
-                    $stockItem->save();
-                    $stockStatus = Mage::getModel('cataloginventory/stock_status');
-                    $stockStatus->assignProduct($product);
-                    $stockStatus->saveProductStatus($product->getId(), 1);
-                }
-                if ($productId) {
-                    $this->_created_num++;
-                    unset($product);
-                    unset($multiple_values);
-                    unset($attributeOcuurance);
-                    return $productId;
+                if ($skipStatus == 0) {
+                    Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
+                    $productId = $product->save()->getId();
+                    if ($manageItem == 'N' || $manageItem == 'n') {
+                        $product->setStockData(array(
+                            'use_config_backorders' => 0,
+                            'is_in_stock' => 1,
+                            'manage_stock' => 0
+                        ));
+                        //code for instock while update product
+                        $stockItem = Mage::getModel('cataloginventory/stock_item');
+                        $stockItem->assignProduct($product);
+                        $stockItem->setData('use_config_manage_stock', 0);
+                        $stockItem->setData('manage_stock', 0);
+                        $stockItem->save();
+                        $stockStatus = Mage::getModel('cataloginventory/stock_status');
+                        $stockStatus->assignProduct($product);
+                        $stockStatus->saveProductStatus($product->getId(), 1);
+                    }
+                    if ($productId) {
+                        $this->_created_num++;
+                        unset($product);
+                        unset($multiple_values);
+                        unset($attributeOcuurance);
+                        return $productId;
+                    } else {
+                        $this->customHelper->reportError($this->customHelper->__('NOTICE: Skipped product due to improper attribute values %s', $item->id));
+                    }
                 } else {
-                    $this->customHelper->reportError($this->customHelper->__('Skipped product due to some error while saving # %s', $item->id));
+                    $this->customHelper->reportError($this->customHelper->__('NOTICE: Skipped product due to some error while save %s', $item->id));
                 }
-            } catch (Mage_Eav_Model_Entity_Attribute_Exception $e) {
+            }
+            catch (Mage_Eav_Model_Entity_Attribute_Exception $e) {
                 $this->customHelper->reportError($e->getMessage());
                 $this->customHelper->reportError($e->getAttributeCode());
                 $this->customHelper->sendLogEmail($this->logPath);
             }
         } else {
-            $this->customHelper->reportError($this->customHelper->__('Attribute set ID # %s is missing. Hence skipped product # %s', $asid, $item->id));
+            $this->customHelper->reportError($this->customHelper->__('Attribute set ID # %s is missing. Hence skipped product SKU # %s', $attid, $item->id));
         }
     }
     
@@ -1666,8 +1446,8 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             $catalogNewproductDays = Mage::getStoreConfig('catalog/newproduct/days', Mage::app()->getStore());
             if (!empty($catalogNewproductDays) && $catalogNewproductDays >= 0) {
                 $currenDateTime = date("Y-m-d H:i:s", Mage::getModel('core/date')->timestamp(time()));
-                $new_from_date = date($format, strtotime('1 days' . $currenDateTime));
-                $new_to_date = date($format, strtotime($catalogNewproductDays . ' days' . $new_from_date));
+                $new_from_date = $currenDateTime;
+                $new_to_date   = date($format, strtotime($catalogNewproductDays . ' days' . $new_from_date));
                 $product->setNewsFromDate($new_from_date);
                 $product->setNewsToDate($new_to_date);
             }
@@ -1750,7 +1530,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 $this->customHelper->sendLogEmail($this->logPath);
             }
         } else {
-            $this->customHelper->reportError($this->customHelper->__('Attribute set ID # %s is missing. Hence skipped product # %s', $asid, $item->id));
+            $this->customHelper->reportError($this->customHelper->__('Attribute set ID # %s is missing. Hence skipped product SKU # %s', $attid, $item->id));
         }
     }
     
@@ -1812,20 +1592,23 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 if (array_key_exists((string) $attr->id, $attributeOcuurance)) {
                     $multiple_values[(string) $attr->id][]  = (string) $attr->valueDefId;
                     $attributeOcuurance[(string) $attr->id] = (int) $attributeOcuurance[(string) $attr->id] + 1;
+                    if($attr_type == 'text' || $attr_type == 'textarea'){
+                        $multiple_values[(string) $attr->id][]  = (string) $attr->value;
+                    }
                 } else {
                     $multiple_values[(string) $attr->id][]  = (string) $attr->valueDefId;
                     $attributeOcuurance[(string) $attr->id] = $i;
-                }
-                if($attr_type == 'text' || $attr_type == 'textarea'){
-                    $multiple_values[(string) $attr->id][]  = (string) $attr->value;
+                    if($attr_type == 'text' || $attr_type == 'textarea'){
+                        $multiple_values[(string) $attr->id][]  = (string) $attr->value;
+                    }
                 }
             }
+            $skipStatus = 0;
             foreach ($multiple_values as $attribute_code => $attribute_values) {
                 $loadedattr = $model->loadByCode('catalog_product', $attribute_code);
                 $attr_id    = $loadedattr->getAttributeId(); // attribute id of magento
                 if (!$attr_id) {
-                    $this->customHelper->reportError($this->customHelper->__('Attribute %s is not available in magento. Hence skipping product # %s', $attribute_code, $item->id));
-                    return;
+                    $this->customHelper->reportError($this->customHelper->__('Attribute %s is not available in magento database.Hence skipping product having id %s', $attribute_code, $item->id));
                 } else {
                     $attr_type = $loadedattr->getFrontendInput();
                     if ($attr_type == 'select' && count($attribute_values) == 1) {
@@ -1833,32 +1616,30 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                         $option_id = $mapObj->isOptionExistsInAttribute($attribute_values[0], $attr_id);
                         if ($option_id) {
                             $product->setData($attribute_code, $option_id);
-                        } else {
-                            $this->customHelper->reportError($this->customHelper->__('Attribute %s has an undefined option value %s. Hence skipping product # %s', $attribute_code, $attribute_values[0], $item->id));
-                            return;
                         }
-                    } elseif ($attr_type == 'select' && count($attribute_values) > 1) {
+                    }
+                    if ($attr_type == 'select' && count($attribute_values) > 1) {
                         //multiple values for attribute which is not multiselect
-                        $this->customHelper->reportError($this->customHelper->__('Attribute %s can not have multiple values. Hence skipping product # %s', $attribute_code, $item->id));
-                        return;
-                    } elseif ($attr_type == 'multiselect') {
+                        $this->customHelper->reportError($this->customHelper->__('Attribute %s can not have multiple values. Hence skipping product having id %s', $attribute_code, $item->id));
+                        $skipStatus = 1;
+                        break;
+                    }
+                    if ($attr_type == 'multiselect') {
                         $multivalues = array();
                         foreach ($attribute_values as $value) {
                             $mapObj    = Mage::getModel('customimport/customimport');
                             $option_id = $mapObj->isOptionExistsInAttribute($value, $attr_id);
                             if ($option_id) {
                                 $multivalues[] = $option_id;
-                            } else {
-                                $this->customHelper->reportError($this->customHelper->__('Attribute %s has an undefined option value %s. Hence skipping product # %s', $attribute_code, $value, $item->id));
-                                return;
                             }
                         }
                         $product->addData(array(
                             $attribute_code => $multivalues
                         ));
-                    } elseif ($attr_type == 'text' || $attr_type == 'textarea') { // if type is text/textarea
+                    }
+                    if ($attr_type == 'text' || $attr_type == 'textarea') { // if type is text/textarea
                         $product->setData($attribute_code, $attribute_values[1]);
-                    } elseif ($attr_type == 'boolean') {
+                    } else if ($attr_type == 'boolean') {
                         $optVal = Mage::getSingleton('customimport/customimport')->getOptVal($attribute_values[0]);
                         if (strtolower($optVal->getValue()) == 'y' || strtolower($optVal->getValue()) == 'yes') {
                             $attOptVal = 1;
@@ -1869,35 +1650,39 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                     }
                 }
             }
-
-            Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
-            $productId = $product->save()->getId();
-            $this->_updated_num++;
-            $stockItem   = Mage::getModel('cataloginventory/stock_item')->loadByProduct($productId);
-            $stockItemId = $stockItem->getId();
-            $inventory   = $item->inventory;
-            $manageItem  = (string) $inventory->manageStock;
-            $manageItem  = strtoupper($manageItem);
-            if ($manageItem == 'Y') { // if product item exist
-                $stockItem->setData('manage_stock', 1);
-                $stockItem->setData('is_in_stock', 1);
-                $stockItem->setData('qty', $inventory->atp);
-                if (strtoupper($inventory->allowBackorders) == 'Y') { // if back order allowed
-                    $stockItem->setData('use_config_backorders', 0);
-                    $stockItem->setData('backorders', 1);
+            if ($skipStatus == 0) {
+                Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
+                $productId = $product->save()->getId();
+                $this->_updated_num++;
+                $stockItem   = Mage::getModel('cataloginventory/stock_item')->loadByProduct($productId);
+                $stockItemId = $stockItem->getId();
+                $inventory   = $item->inventory;
+                $manageItem  = (string) $inventory->manageStock;
+                $manageItem  = strtoupper($manageItem);
+                if ($manageItem == 'Y') { // if product item exist
+                    $stockItem->setData('manage_stock', 1);
+                    $stockItem->setData('is_in_stock', 1);
+                    $stockItem->setData('qty', $inventory->atp);
+                    if (strtoupper($inventory->allowBackorders) == 'Y') { // if back order allowed
+                        $stockItem->setData('use_config_backorders', 0);
+                        $stockItem->setData('backorders', 1);
+                    }
+                    if (strtoupper($inventory->allowBackorders) == 'N') { // if back order allowed
+                        $stockItem->setData('use_config_backorders', 0);
+                        $stockItem->setData('backorders', 0);
+                    }
+                } else {
+                    $stockItem->setData('use_config_manage_stock', 0);
+                    $stockItem->setData('manage_stock', 0); // manage stock to no
                 }
-                if (strtoupper($inventory->allowBackorders) == 'N') { // if back order allowed
-                    $stockItem->setData('use_config_backorders', 0);
-                    $stockItem->setData('backorders', 0);
-                }
+                
+                Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
+                $stockItem->save();
+                unset($product);
+                return $productId;
             } else {
-                $stockItem->setData('use_config_manage_stock', 0);
-                $stockItem->setData('manage_stock', 0); // manage stock to no
+                $this->customHelper->reportError($this->customHelper->__('Skipped product due to improper attribute values : %s', $item->id));
             }
-
-            Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
-            $stockItem->save();
-            unset($product);
         } else {
             $this->customHelper->reportError($this->customHelper->__('Skipped product due to some error while save : %s', $item->id));
         }
@@ -2101,6 +1886,147 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
         $t1              = microtime(true);
         $time            = $t1 - $t0;
         $this->customHelper->reportInfo($this->customHelper->__('Found %s records', $count));
+    }
+    
+    /*
+     * create category
+     * */
+    protected function createCategory($item)
+    {
+        $default_root_category = $this->_default_category_id;
+        $parent_id             = ((string) $item->isRoot == 'Y') ? 1 : $default_root_category;
+        $isActive              = ((string) $item->isActive == 'Y') ? 1 : 0;
+        
+        $category        = Mage::getModel('catalog/category')->setStoreId($this->_store_id);
+        $parent_category = $this->_initCategory($parent_id, $this->_store_id);
+        if (!$parent_category->getId()) {
+            $this->customHelper->reportError($this->customHelper->__('parent category not found'));
+        } else {
+            $category->addData(array(
+                'path' => implode('/', $parent_category->getPathIds())
+            ));
+            /* @var $validator Mage_Catalog_Model_Api2_Product_Validator_Product */
+            $category->setParentId($parent_category->getId());
+            $category->setAttributeSetId($category->getDefaultAttributeSetId());
+            $category->setData('name', (string) $item->name);
+            $category->setData('include_in_menu', 1);
+            $category->setData('meta_title', (string) $item->pageTitle);
+            $category->setData('meta_keywords', (string) $item->metaKeywords);
+            $category->setData('meta_description', (string) $item->metaDescription);
+            $category->setData('description', (string) $item->description);
+            $category->setData('available_sort_by', 'position');
+            $category->setData('default_sort_by', 'position');
+            $category->setData('is_active', $isActive);
+            $category->setData('is_anchor', 1);
+            $category->setData('external_id', (string) $item->id);
+            $category->setData('external_cat_image', (string) $item->imageUrl);
+            try {
+                $validate = $category->validate();
+                if ($validate !== true) {
+                    foreach ($validate as $code => $error) {
+                        if ($error === true) {
+                            $this->customHelper->reportError($this->customHelper->__('Attribute "%s" is required', $code));
+                            $this->customHelper->sendLogEmail($this->logPath);
+                            Mage::throwException($this->customHelper->__->__('Attribute "%s" is required.', $code));
+                        } else {
+                            $this->customHelper->reportError($error);
+                            $this->customHelper->sendLogEmail($this->logPath);
+                            Mage::throwException($error);
+                        }
+                    }
+                }
+                $category->save();
+            }
+            catch (Exception $e) {
+                $this->customHelper->reportError($e->getMessage());
+                $this->customHelper->sendLogEmail($this->logPath);
+            }
+        }
+    }
+    
+    protected function updateCategory($item, $categoryId)
+    {
+        $category = Mage::getModel('catalog/category')->load($categoryId);
+        $isActive = ((string) $item->isActive == 'Y') ? 1 : 0;
+        $category->setData('name', (string) $item->name);
+        $category->setData('include_in_menu', 1);
+        $category->setData('meta_title', (string) $item->pageTitle);
+        $category->setData('meta_keywords', (string) $item->metaKeywords);
+        $category->setData('meta_description', (string) $item->metaDescription);
+        $category->setData('description', (string) $item->description);
+        $category->setData('is_active', $isActive);
+        $category->setData('is_anchor', 1);
+        $category->setData('external_cat_image', (string) $item->imageUrl);
+        Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
+        $category->save();
+    }
+    
+    /**
+     * main function to import category
+     */
+    protected function importCategory($item)
+    {
+        $externalId = (string) $item->id;
+        $externall  = $this->checkExternalId($externalId);
+        
+        if ($externall) {
+            if (count($externall) == 1) {
+                //update already existing category with this id
+                reset($externall); //to take 1st key of array
+                $first_key = key($externall);
+                $this->updateCategory($item, $first_key);
+                $this->_updated_num++;
+            } else {
+                foreach ($externall as $systemCatid => $v) {
+                    $this->updateCategory($item, $systemCatid);
+                }
+            }
+        } else {
+            // category is not available hence create new
+            if (count($externall) == 0) {
+                $this->createCategory($item);
+                $this->_created_num++;
+            }
+        }
+    }
+    
+    /**
+     * checks for a category existance using external id
+     * @param external id of category
+     */
+    protected function checkExternalId($externalId)
+    {
+        $catsWithCustomAttr = array();
+        $collection         = Mage::getModel('catalog/category')->getCollection();
+        $collection->addAttributeToSelect("external_id");
+        //Do a left join, and get values that aren't null - you could add other conditions in the second parameter also (check out all options in the _getConditionSql method of lib/Varien/Data/Collection/Db.php
+        $collection->addAttributeToFilter('external_id', $externalId, 'left');
+        foreach ($collection as $category) {
+            $catsWithCustomAttr[$category->getId()] = $category->getExternalId();
+        }
+        return $catsWithCustomAttr;
+    }
+    
+    /**
+     * loads a category, if exists
+     * @param category id
+     */
+    protected function _initCategory($categoryId, $store = null)
+    {
+        try {
+            $category = Mage::getModel('catalog/category')->setStoreId($store)->load($categoryId);
+            if (!$category->getId()) {
+                $errorMsg = $this->customHelper->__('Parent category %s is not available', $categoryId);
+                $this->customHelper->reportError($errorMsg);
+                $this->customHelper->sendLogEmail($this->logPath);
+                Mage::throwException($errorMsg);
+            }
+        }
+        catch (Exception $e) {
+            $this->customHelper->reportError($e->getMessage());
+            $this->customHelper->sendLogEmail($this->logPath);
+        }
+        return $category;
     }
     
     public function getCurrentRow()
