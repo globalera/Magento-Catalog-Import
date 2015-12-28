@@ -863,63 +863,53 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
         }
     }
     
-    public function parseCategoryRelation()
-    {
-    	$xmlData = $this->_xmlObj->getNode();
-    	if ($xmlData->categoryRelations->categoryRelation instanceof Varien_Simplexml_Element) {
-    		return $xmlData->categoryRelations->categoryRelation;
-    	}
-    	return null;
-    }
     public function parseAndUpdateCategoryRelation()
     {
-    	$categoryRelations = $this->parseCategoryRelation();
-        $categoryRelationStatus = 0;
-        $this->customHelper->reportStart($this->customHelper->__('Update Category Relations(%d)', count($categoryRelations)));
-        if (!empty($categoryRelations)) {
-        	$categoryRelationStatus = 1;
-            foreach ($categoryRelations as $catRelation) {
-                $parentCatergotyId  = (string) $catRelation->parentId;
-                $this->customHelper->verboseLog(
-                		$this->customHelper->__('parseAndUpdateCategoryRelation: Processing parent %s', 
-                									$parentCatergotyId));
-                $magentoIds  = $this->checkExternalIdEx($parentCatergotyId);
-                if (!empty(checkExternalIdEx)) { //check if parent id exists.
-                	foreach ($magentoIds as $magentoId) {
-	                	foreach ($catRelation->subCategory as $subCategory) {
-	                                $this->updateCategoryRelation($subCategory, $magentoId, $parentCatergotyId);
-	                	}
-                	}
-                }
-                else {
+        $xmlObj                 = $this->_xmlObj;
+        $xmlData                = $xmlObj->getNode();
+        $this->_cat_relation    = $xmlData->categoryRelations->categoryRelation;
+        $categoryRelationStatus = 1;
+        if (count($this->_cat_relation) > 0) {
+            foreach ($this->_cat_relation as $catRelation) {
+                $parent    = (string) $catRelation->parentId;
+                $externall = $this->checkExternalId($parent);
+                if ($externall) { //check if parent id exists.
+                    if (count($externall) == 1) {
+                        reset($externall); //to take 1st key of array
+                        $first_key = key($externall);
+                        foreach ($catRelation->subCategory as $sub) {
+                            $this->updateCategoryRelation($sub, $first_key, $parent);
+                        }
+                    } else {
+                        foreach ($externall as $systemCatid => $v) {
+                            foreach ($catRelation->subCategory as $sub) {
+                                $this->updateCategoryRelation($sub, $systemCatid, $parent);
+                            }
+                        }
+                    }
+                } else {
                     $categoryRelationStatus = 2;
-                    $this->customHelper->reportError(
-                    		$this->customHelper->__('parseAndUpdateCategoryRelation: Parent category "%s" not found.', 
-                    		$parentCatergotyId));
+                    $this->customHelper->reportError($this->customHelper->__('Parent category not found : ') . $parent);
                 }
             }
+        } else {
+            $categoryRelationStatus = 0;
         }
-        $this->customHelper->reportEnd("Update Category Relations");
         return $categoryRelationStatus;
     }
     
     //duplicating categoryid 
     protected function duplicateCategory($categoryId, $parentId, $status)
     {
-    	$this->customHelper->verboseLog($this->customHelper->__(
-    			'duplicateCategory function called with categoryId: %s, ParentId:%s.',
-    			$categoryId, $parentId));
-        $parent_id             = ($parentId) ? $parentId : $this->_default_category_id;
+        $default_root_category = $this->_default_category_id;
+        $parent_id             = ($parentId) ? $parentId : $default_root_category;
         $isActive              = ($status == 'Y') ? 1 : 0;
-        $parent_category       = $this->_initCategory($parent_id, $this->_store_id);
-        if (!$parent_category->getId()) {
-        	$this->customHelper->reportError($this->customHelper->__("Failed to Load Parent Category %s(%s). ",
-        			$parentId, $parent_id));
-        	return false;
-        }
         $category              = Mage::getModel('catalog/category')->setStoreId($this->_store_id)->load($categoryId); //load category to duplicate
         $duplicate_category    = Mage::getModel('catalog/category')->setStoreId($this->_store_id);
-        
+        $parent_category       = $this->_initCategory($parentId, $this->_store_id);
+        if (!$parent_category->getId()) {
+            exit;
+        }
         $duplicate_category->addData(array(
             'path' => implode('/', $parent_category->getPathIds())
         ));
@@ -1000,34 +990,30 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     public function updateCategoryRelation($subcat, $p_id, $parent_external_id)
     {
         $ext_subid   = (string) $subcat->id;
-        $isActive = ((string) $subcat->isActive == 'Y') ? 1 : 0;
-        $actualSubId = $this->checkExternalIdEx($ext_subid);
-        $this->customHelper->verboseLog(
-    			$this->customHelper->__(
-    					'updateCategoryRelation Called for PID: %s, External PID: %s, SubID: %s, Status: %d', 
-    			$p_id, $parent_external_id, $item->id, $isActive));
-        if (!empty($actualSubId)) {
-        	$mapObj      = Mage::getModel('customimport/customimport');
+        $actualSubId = $this->checkExternalId($ext_subid);
+        $mapObj      = Mage::getModel('customimport/customimport');
+        
+        if ($actualSubId) {
             if (count($actualSubId) == 1) {
-                $subcat_id   = $actualSubId[0];
+                reset($actualSubId); //to take 1st key of array
+                $subcat_id   = key($actualSubId);
                 $category_id = $mapObj->isSubcategoryExists($ext_subid, $p_id); // external subcat id , parent magento id
                 
                 if ($category_id) {
-                	$this->customHelper->verboseLog(
-                			$this->customHelper->__('updateCategoryRelation: Association of PID: %s, External PID: %s and SubID: %s already exist',
-                					$p_id, $parent_external_id, $item->id));
                     $category = Mage::getModel('catalog/category')->setStoreId($this->_store_id)->load($subcat_id);
+                    $isActive = ((string) $subcat->isActive == 'Y') ? 1 : 0;
                     $category->setData('is_active', $isActive);
                     $category->save();
-                }
-                else {
+                } else {
                     $category_id = $mapObj->isCategoryExists($ext_subid);
                     if ($category_id) {
+                        $isActive = ((string) $subcat->isActive);
                         $status   = $this->getTreeCategories($category_id, $p_id, $isActive, false);
                     } else {
                         // category is not under any other parent , move
                         $category = Mage::getModel('catalog/category')->setStoreId($this->_store_id)->load($subcat_id);
                         $category->move($p_id, 0);
+                        $isActive = ((string) $subcat->isActive == 'Y') ? 1 : 0;
                         $category->setData('is_active', $isActive);
                         $category->save();
                         $mapObj->updateParent($p_id, $subcat_id);
@@ -1039,20 +1025,21 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                 if ($category_id) {
                     //echo 'subcat present in this cat '.$ext_subid;
                     $category = Mage::getModel('catalog/category')->setStoreId($this->_store_id)->load($category_id);
+                    $isActive = ((string) $subcat->isActive == 'Y') ? 1 : 0;
                     $category->setData('is_active', $isActive);
                     $category->save();
                 } elseif ($category_id = $mapObj->isCategoryExists($ext_subid)) {
+                    $isActive = ((string) $subcat->isActive);
                     $status   = $this->getTreeCategories($category_id, $p_id, $isActive, false);
                 } else {
                     // category is not under any other parent , move                   
-                    $this->customHelper->reportError($this->customHelper->__('block will not execute as category is not under any other parent'));
+                    $this->customHelper->reportInfo($this->customHelper->__('block will not execute as category is not under any other parent'));
                 }
             }
-        }
-        else {
-        	$this->customHelper->reportError(
-        			$this->customHelper->__('There was no magento (subcategory) id found for external id %s ', 
-        					$ext_subid));
+        } else {
+            if (count($actualSubId) == 0) {
+                $this->customHelper->reportError($this->customHelper->__('There was no subcategory id found %s ', $ext_subid));
+            }
         }
     }
     
