@@ -193,7 +193,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     * */
     protected function createCategory($item)
     {
-    	$this->customHelper->verboseLog($this->customHelper->__("Creating Cagegory. ID: %s, Name:%s",
+    	$this->customHelper->verboseLog($this->customHelper->__("Creating Category. ID: %s, Name:%s",
     			$item->id, $item->name));
     	$parentId             = ((string) $item->isRoot == 'Y') ? 1 : $this->_default_category_id;
     	$isActive              = ((string) $item->isActive == 'Y') ? true : false;
@@ -201,7 +201,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     	$category        = Mage::getModel('catalog/category')->setStoreId($this->_store_id);
     	$parent_category = $this->_initCategory($parent_id, $this->_store_id);
     	if ($parent_category){
-    		$this->customHelper->verboseLog($this->customHelper->__("Parent cagegory of %s is %s",
+    		$this->customHelper->verboseLog($this->customHelper->__("Parent Category of %s is %s",
     				$item->id, $parent_category->getId()));
     		$category->addData(array(
     				'path' => implode('/', $parent_category->getPathIds())
@@ -222,27 +222,34 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     		$category->setData('external_id', (string) $item->id);
     		$category->setData('external_cat_image', (string) $item->imageUrl);
     		try {
-    			$this->customHelper->verboseLog($this->customHelper->__("Starting Validation for cagegory %s",
+    			$this->customHelper->verboseLog($this->customHelper->__("Starting Validation for Category %s",
     					$item->id));
     			$validate = $category->validate();
     			if ($validate === true) {
-    				$this->customHelper->verboseLog($this->customHelper->__("Validation for cagegory %s passed",
+    				$this->customHelper->verboseLog($this->customHelper->__("Validation for Category %s passed",
     						$item->id));
     				$category->save();
-    				$this->customHelper->verboseLog($this->customHelper->__("Cagegory %s Got Created successfully",
+    				$this->customHelper->verboseLog($this->customHelper->__("Category %s Got Created successfully",
     						$item->id));
     				$this->_created_num++;
     			}
     			else {
-    				$this->customHelper->verboseLog($this->customHelper->__("Validation for cagegory %s Failed.",
+    				$this->customHelper->verboseLog($this->customHelper->__("Validation for Category %s Failed.",
     						$item->id));
-    				foreach ($validate as $code => $error) {
-    					$errorText = ($error === true) ? 'Attribute "%s" is required' : '%s';
-    					$errorText = sprintf("Category Creation Failed for %s (%s).%s, Code:%s",
-    							$item->name, $item->id, $error, $code);
-    					$this->customHelper->reportError($errorText);
-    					$this->customHelper->sendLogEmail($this->logPath);
-    				}
+	    			$errorText = '';
+		            foreach ($validate as $code => $error) {
+		            	if($error === true) {
+		            		$errorText .= sprintf("Attribute '%s' is required\n", $code);
+		            	}
+		            	else {
+		            		$errorText .= sprintf("Category Duplication Failed for %s.Error: %s, Code:%s\n",
+		            				$category->getName(), $error, $code);
+		            	}
+		            }
+		            if(!empty($errorText)) {
+		            	$this->customHelper->reportError();
+		            	$this->customHelper->sendLogEmail($this->logPath);
+		            }
     			}
     
     		}
@@ -255,11 +262,11 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     
     protected function updateCategory($item, $categoryId)
     {
-    	$this->customHelper->verboseLog($this->customHelper->__("Updating Cagegory ID (%s): %s, Name:%s",
+    	$this->customHelper->verboseLog($this->customHelper->__("Updating Category ID (%s): %s, Name:%s",
     			$categoryId, $item->id, $item->name));
     	$category = Mage::getModel('catalog/category')->load($categoryId);
     	if (!empty($category)) {
-    		$this->customHelper->verboseLog($this->customHelper->__("Cagegory ID (%s): %s Loaded successfully.",
+    		$this->customHelper->verboseLog($this->customHelper->__("Category ID (%s): %s Loaded successfully.",
     				$categoryId, $item->id));
     		try {
     			$isActive = ((string) $item->isActive == 'Y') ? 1 : 0;
@@ -273,10 +280,10 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     			$category->setData('is_anchor', 1);
     			$category->setData('external_cat_image', (string) $item->imageUrl);
     			Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
-    			$this->customHelper->verboseLog($this->customHelper->__("Saving Cagegory ID (%s) %s.",
+    			$this->customHelper->verboseLog($this->customHelper->__("Saving Category ID (%s) %s.",
     					$categoryId, $item->id));
     			$category->save();
-    			$this->customHelper->verboseLog($this->customHelper->__("Cagegory ID (%s) %s Saved.",
+    			$this->customHelper->verboseLog($this->customHelper->__("Category ID (%s) %s Saved.",
     					$categoryId, $item->id));
     		}
     		catch (Exception $e) {
@@ -285,7 +292,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     		}
     	}
     	else {
-    		$this->customHelper->verboseLog($this->customHelper->__("Cagegory ID (%s): %s loading failed.",
+    		$this->customHelper->verboseLog($this->customHelper->__("Category ID (%s): %s loading failed.",
     				$categoryId, $item->id));
     	}
     }
@@ -940,18 +947,29 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
         try {
             $validate = $duplicate_category->validate();
             if ($validate !== true) {
-                foreach ($validate as $code => $error) {
-                    if ($error === true) {
-                        $this->customHelper->reportError($this->customHelper->__('Attribute "%s" is required', $code));
-                        $this->customHelper->sendLogEmail($this->logPath);
-                    } else {
-                        $this->customHelper->reportError($error);
-                        $this->customHelper->sendLogEmail($this->logPath);
-                        Mage::throwException($error);
-                    }
-                }
+	            $this->customHelper->verboseLog($this->customHelper->__("Validation for duplicated category %s Failed.",
+	            		$category->getName()));
+	            $errorText = '';
+	            foreach ($validate as $code => $error) {
+	            	if($error === true) {
+	            		$errorText .= sprintf("Attribute '%s' is required\n", $code);
+	            	}
+	            	else {
+	            		$errorText .= sprintf("Category Duplication Failed for %s.Error: %s, Code:%s\n",
+	            				$category->getName(), $error, $code);
+	            	}
+	            }
+	            if(!empty($errorText)) {
+	            	$this->customHelper->reportError();
+	            	$this->customHelper->sendLogEmail($this->logPath);
+	            }
+	            return false;
             }
+            $this->customHelper->verboseLog($this->customHelper->__("Validation for duplicate category %s passed",
+            		$category->getName()));
             $duplicate_category->save();
+            $this->customHelper->verboseLog($this->customHelper->__("Category %s Duplicated successfully",
+            		$category->getName()));
             return $duplicate_category->getId();
         }
         catch (Exception $e) {
@@ -963,7 +981,16 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     
     public function getTreeCategories($category_id, $p_id, $isActive, $isChild) //$parentId, $isChild
     {
+    	$this->customHelper->verboseLog($this->customHelper->__(
+    			'getTreeCategories called with categoryId: %s, ParentId:%s.',
+    			$category_id, $p_id));
         $duplicatedCategoryId = $this->duplicateCategory($category_id, $p_id, $isActive);
+        if ($duplicatedCategoryId === false) {
+        	$this->customHelper->verboseLog($this->customHelper->__(
+        			'getTreeCategories: Failed to duplicate categoryId: %s, ParentId:%s.',
+        			$category_id, $p_id));
+        	return;
+        }
         $mapObj               = Mage::getModel('customimport/customimport');
         $sub_category         = Mage::getModel('catalog/category')->setStoreId($this->_store_id)->load($duplicatedCategoryId);
         $parent_category      = Mage::getModel('catalog/category')->setStoreId($this->_store_id)->load($p_id);
@@ -980,17 +1007,19 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
             if ($status_cat == 1) {
                 $isActive = 'Y';
             }
-            if ($subcats != '') {
+            if (!empty($subcats)) {
                 $this->getTreeCategories($category->getId(), $duplicatedCategoryId, $isActive, true);
-            } else {
+            }
+            else {
                 $duplicatedSubcategoryId = $this->duplicateCategory($category->getId(), $duplicatedCategoryId, $isActive); // duplicated category id is parent for current subcategory
-                if ($duplicatedSubcategoryId) {
+                if ($duplicatedSubcategoryId !== false) {
                     $sub_category       = Mage::getModel('catalog/category')->setStoreId($this->_store_id)->load($duplicatedSubcategoryId);
                     $parent_category    = Mage::getModel('catalog/category')->setStoreId($this->_store_id)->load($duplicatedCategoryId);
                     $ext_subid          = $sub_category->getExternalId();
                     $parent_external_id = $parent_category->getExternalId();
                     $mapObj->updateCategoryMappingInfo($ext_subid, $duplicatedSubcategoryId, $parent_external_id, $duplicatedCategoryId);
-                } else {
+                }
+                else {
                     $this->customHelper->reportError($this->customHelper->__('There was an error while duplicating category'));
                 }
             }
