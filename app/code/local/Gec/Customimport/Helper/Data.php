@@ -20,28 +20,31 @@
 
 class Gec_Customimport_Helper_Data extends Mage_Core_Helper_Abstract
 {
-	private $colormap = array(
+	public static $colormap = array(
 			"info" => "blue",
 			"error" => "red",
 			"success" => "#009900"
 	);
-	public function __construct()
-	{
-		parent::__construct();
-		$this->is_verbose = true;
+	public static $is_verbose = true;
+	public function isVerbose() {
+		return self::$is_verbose;
+	}
+	public function getColorMap() {
+		return self::$colormap;
 	}
 	public function verboseLog($msg)
 	{
-		if($this->is_verbose){
-			$this->writeCustomLog($msg);
-		}
+		$this->writeCustomLog($msg);
+// 		if(Gec_Customimport_Helper_Data::isVerbose()){
+// 			$this->writeCustomLog($msg);
+// 		}
 	}
 
     public function writeCustomLog($msg, $path = null) {
     	if($path == null){
     		$path = Mage::getBaseDir('log').'/customimport.log';
     	}
-    	error_log("[".date('Y:m:d H:i:s', time())."] : ".print_r($msg, true)."<br/> \r\n", 3, $path);
+    	error_log("[".date('Y:m:d H:i:s', time())."] : ".print_r($msg, true)."\n", 3, $path);
     }
     
     public function sendLogEmail($logPath = '')
@@ -88,7 +91,7 @@ class Gec_Customimport_Helper_Data extends Mage_Core_Helper_Abstract
     }
     private function reportLog($message, $color="black", $display = true)
     {
-    	$this->writeCustomLog($msg);
+    	$this->writeCustomLog($message);
     	if($display)
     	{
 	    	$message = sprintf('<br/><br/><span style="color:%s;">%s</span>', $color, $message);
@@ -96,22 +99,22 @@ class Gec_Customimport_Helper_Data extends Mage_Core_Helper_Abstract
     	}
     }
     public function reportStart($msg){
-    	$msg = sprintf('******************** Starting %s ********************</span>', $msg);
+    	$msg = sprintf('******************** Starting %s ********************', $msg);
     	$this->reportLog($msg);
     }
     public function reportEnd($msg){
-    	$msg = sprintf('******************** Ending %s ********************</span>', $msg);
+    	$msg = sprintf('******************** Ending %s ********************', $msg);
     	$this->reportLog($msg);
     }
 	public function reportInfo($msg){
-		$this->reportLog($msg, $this->colormap['info']);
+		$this->reportLog($msg, Gec_Customimport_Helper_Data::getColorMap()['info']);
 	}
 	
 	public function reportError($msg){
-		$this->reportLog($msg, $this->colormap['error']);
+		$this->reportLog($msg, Gec_Customimport_Helper_Data::getColorMap()['error']);
 	}
 	
 	public function reportSuccess($msg){
-		$this->reportLog($msg, $this->colormap['success']);
+		$this->reportLog($msg, Gec_Customimport_Helper_Data::getColorMap()['success']);
 	}
 }

@@ -1,4 +1,4 @@
-<?php
+ <?php
 /**
 #    Copyright (C) 2013-2015 Global Era Commerce (http://www.globalera.com). All Rights Reserved
 #    @author Serenus Infotech <magento@serenusinfotech.com>
@@ -22,7 +22,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
 {
     protected $customHelper;
     protected $logPath;
-    private $_externalIdToCategoryIdMap;
+    public $_externalIdToCategoryIdMap;
     
     public function __construct()
     {
@@ -93,24 +93,34 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     {
     	$this->customHelper->verboseLog("Refreshing Exertnal ID to Magento ID map.");
     	
-    	unset($this->_externalIdToCategoryIdMap);
+    	//unset($this->_externalIdToCategoryIdMap);
     	$this->_externalIdToCategoryIdMap = array();
-    	$catsWithCustomAttr = array();
     	$collection         = Mage::getModel('catalog/category')->getCollection();
     	$collection->addAttributeToSelect("external_id");
+    	$collection->addAttributeToFilter('external_id', array('gt' => 0), 'left');
     	if(!empty($collection))
     	{
 	    	foreach ($collection as $category)
 	    	{
-	    		if(!empty($category->getExternalId()))
-	    			$this->_externalIdToCategoryIdMap[$category->getExternalId()][] = $category->getId();
+	    		$externalId = strval($category->getExternalId());
+	    		if(!empty($externalId))
+	    		{
+	    			//$this->customHelper->verboseLog($this->customHelper->__('MID: %s, EID:%s',$category->getId(), $externalId));
+	    			if(!isset($this->_externalIdToCategoryIdMap[$externalId]))
+	    			{
+	    				$this->_externalIdToCategoryIdMap[$externalId] = array();
+	    			}
+					array_push($this->_externalIdToCategoryIdMap[$externalId], $category->getId());
+	    		}
 	    	}
     	}
-    	$this->customHelper->verboseLog($this->customHelper->__('Refreshed (%d) Exertnal ID to Magento ID map', count($this->_externalIdToCategoryIdMap)));
+    	$this->customHelper->verboseLog($this->customHelper->__('Refreshed (%d) Exertnal ID to Magento ID map', 
+    			count($this->_externalIdToCategoryIdMap)));
     	
     }
     public function importAllCategory($categories)
     {
+    	$this->refreshExternalIdToCategoryIdMapping();
     	$this->resetCounters();
     	$this->customHelper->reportStart($this->customHelper->__('Import All Category (%d)', count($categories)));
         foreach ($categories as $category) {
@@ -147,7 +157,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     	$magentoIds  = $this->checkExternalIdEx($externalId);
     
     	if ($magentoIds and count($magentoIds) > 0) {
-    		$this->customHelper->verboseLog($this->customHelper->__('$d Mapping (%s) found for External ID %s',
+    		$this->customHelper->verboseLog($this->customHelper->__('%d Mapping (%s) found for External ID %s',
     				count($magentoIds), implode(",", $magentoIds), $item->id));
     		//update already existing category with this id
     		foreach ($magentoIds as $magentoId) {
@@ -199,7 +209,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     	$isActive              = ((string) $item->isActive == 'Y') ? true : false;
     
     	$category        = Mage::getModel('catalog/category')->setStoreId($this->_store_id);
-    	$parent_category = $this->_initCategory($parent_id, $this->_store_id);
+    	$parent_category = $this->_initCategory($parentId, $this->_store_id);
     	if ($parent_category){
     		$this->customHelper->verboseLog($this->customHelper->__("Parent Category of %s is %s",
     				$item->id, $parent_category->getId()));
@@ -229,8 +239,8 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
     				$this->customHelper->verboseLog($this->customHelper->__("Validation for Category %s passed",
     						$item->id));
     				$category->save();
-    				$this->customHelper->verboseLog($this->customHelper->__("Category %s Got Created successfully",
-    						$item->id));
+    				$this->customHelper->verboseLog($this->customHelper->__("Category %s (%s)Got Created successfully.",
+    						$item->id, $category->getId()));
     				$this->_created_num++;
     			}
     			else {
@@ -886,15 +896,15 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
         if (!empty($categoryRelations)) {
         	$categoryRelationStatus = 1;
             foreach ($categoryRelations as $catRelation) {
-                $parentCatergotyId  = (string) $catRelation->parentId;
+                $parentCategoryId  = (string) $catRelation->parentId;
                 $this->customHelper->verboseLog(
                 		$this->customHelper->__('parseAndUpdateCategoryRelation: Processing parent %s', 
-                									$parentCatergotyId));
-                $magentoIds  = $this->checkExternalIdEx($parentCatergotyId);
+                									$parentCategoryId));
+                $magentoIds  = $this->checkExternalIdEx($parentCategoryId);
                 if (!empty(checkExternalIdEx)) { //check if parent id exists.
                 	foreach ($magentoIds as $magentoId) {
 	                	foreach ($catRelation->subCategory as $subCategory) {
-	                                $this->updateCategoryRelation($subCategory, $magentoId, $parentCatergotyId);
+	                                $this->updateCategoryRelation($subCategory, $magentoId, $parentCategoryId);
 	                	}
                 	}
                 }
@@ -902,7 +912,7 @@ class Gec_Customimport_Block_Adminhtml_Customimport extends Gec_Customimport_Blo
                     $categoryRelationStatus = 2;
                     $this->customHelper->reportError(
                     		$this->customHelper->__('parseAndUpdateCategoryRelation: Parent category "%s" not found.', 
-                    		$parentCatergotyId));
+                    		$parentCategoryId));
                 }
             }
         }
